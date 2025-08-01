@@ -4,7 +4,7 @@ from datetime import datetime
 from bson import ObjectId
 
 class User:
-    def _init_(self, email, password, name, business_name=None, phone=None):
+    def __init__(self, email, password, name, business_name=None, phone=None):
         self.email = email
         self.password_hash = generate_password_hash(password)
         self.name = name

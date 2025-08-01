@@ -14,13 +14,14 @@ import QRCode from './pages/QRCode';
 import AITools from './pages/AITools';
 import Settings from './pages/Settings';
 import WebsiteBuilder from './pages/WebsiteBuilder';
+import AITestPage from './pages/AITestPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="App">
             <Toaster position="top-right" />
             <Routes>
@@ -37,6 +38,7 @@ function App() {
                 <Route path="ai-tools" element={<AITools />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="website-builder" element={<WebsiteBuilder />} />
+                <Route path="ai-test" element={<AITestPage />} />
               </Route>
             </Routes>
           </div>

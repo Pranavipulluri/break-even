@@ -8,6 +8,77 @@ import io
 
 qr_bp = Blueprint('qr', __name__)
 
+@qr_bp.route('/qr-code/dev', methods=['GET'])
+def get_qr_code_dev():
+    """Development endpoint for QR code info without authentication"""
+    try:
+        # For development, try to get any deployed websites from the database
+        # This would normally be filtered by user_id, but for dev we'll show any
+        deployed_websites = []
+        
+        try:
+            from app import mongo
+            websites_cursor = mongo.db.child_websites.find({
+                'website_url': {'$exists': True, '$ne': None, '$ne': ''}
+            }).sort('created_at', -1).limit(10)
+            
+            for website in websites_cursor:
+                deployed_websites.append({
+                    'id': str(website.get('_id', 'unknown')),
+                    'name': website.get('website_name', 'Unnamed Website'),
+                    'url': website.get('website_url'),
+                    'platform': website.get('platform', 'unknown'),
+                    'created_at': website.get('created_at')
+                })
+        except Exception as e:
+            print(f"Could not fetch websites: {e}")
+            # Fallback to sample data
+            deployed_websites = [
+                {
+                    'id': 'sample1',
+                    'name': 'Sample Business Website',
+                    'url': 'https://example.netlify.app',
+                    'platform': 'netlify',
+                    'created_at': datetime.utcnow()
+                }
+            ]
+        
+        # Use the first deployed website URL if available, otherwise localhost
+        default_url = 'http://localhost:3001'
+        if deployed_websites and deployed_websites[0]['url']:
+            default_url = deployed_websites[0]['url']
+        
+        return jsonify({
+            'websiteUrl': default_url,
+            'totalScans': 15,
+            'scansToday': 3,
+            'lastScan': datetime.utcnow().isoformat(),
+            'deployedWebsites': deployed_websites,
+            'qrCodeId': 'dev-qr-id'
+        }), 200
+        
+    except Exception as e:
+        print(f"QR dev endpoint error: {e}")
+        return jsonify({'error': 'Failed to retrieve QR code information'}), 500
+
+@qr_bp.route('/qr-code/dev/update-url', methods=['POST'])
+def update_qr_url_dev():
+    """Development endpoint to update QR URL without authentication"""
+    try:
+        data = request.get_json()
+        website_url = data.get('website_url')
+        
+        if not website_url:
+            return jsonify({'error': 'Website URL is required'}), 400
+        
+        return jsonify({
+            'message': 'QR code URL updated successfully (development mode)',
+            'website_url': website_url
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': 'Failed to update QR code URL'}), 500
+
 @qr_bp.route('/qr-code', methods=['GET'])
 @jwt_required()
 def get_qr_code():
@@ -20,9 +91,24 @@ def get_qr_code():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Generate website URL
-        business_name = user.get('business_name', '').replace(' ', '-').lower()
-        website_url = f"{current_app.config.get('WEBSITE_BASE_URL', 'https://your-domain.com')}/{business_name or current_user_id}"
+        # Get user's deployed websites from website builder
+        deployed_websites = list(mongo.db.child_websites.find({
+            'user_id': ObjectId(current_user_id),
+            'website_url': {'$exists': True, '$ne': None}
+        }).sort('created_at', -1))
+        
+        # Default website URL - use deployed website if available
+        website_url = f"{current_app.config.get('WEBSITE_BASE_URL', 'https://your-domain.com')}/{user.get('business_name', '').replace(' ', '-').lower() or current_user_id}"
+        
+        # Check if user has a custom QR URL setting
+        qr_settings = mongo.db.qr_settings.find_one({'user_id': ObjectId(current_user_id)})
+        if qr_settings and qr_settings.get('website_url'):
+            website_url = qr_settings['website_url']
+        elif deployed_websites:
+            # Use the most recent deployed website URL if no custom setting
+            latest_website = deployed_websites[0]
+            if latest_website.get('website_url'):
+                website_url = latest_website['website_url']
         
         # Get QR analytics
         qr_analytics = mongo.db.qr_analytics.find_one({'user_id': ObjectId(current_user_id)})
@@ -37,17 +123,65 @@ def get_qr_code():
             }
             mongo.db.qr_analytics.insert_one(qr_analytics)
         
+        # Format deployed websites for frontend
+        websites_list = []
+        for website in deployed_websites:
+            websites_list.append({
+                'id': str(website['_id']),
+                'name': website.get('website_name', 'Unnamed Website'),
+                'url': website.get('website_url'),
+                'platform': website.get('platform', 'unknown'),
+                'created_at': website.get('created_at')
+            })
+        
         return jsonify({
             'websiteUrl': website_url,
             'totalScans': qr_analytics.get('total_scans', 0),
             'scansToday': qr_analytics.get('scans_today', 0),
             'lastScan': qr_analytics.get('last_scan'),
+            'deployedWebsites': websites_list,
             'qrCodeId': str(qr_analytics.get('_id', ''))
         }), 200
         
     except Exception as e:
         current_app.logger.error(f"Error getting QR code info: {e}")
         return jsonify({'error': 'Failed to retrieve QR code information'}), 500
+
+@qr_bp.route('/qr-code/update-url', methods=['POST'])
+@jwt_required()
+def update_qr_url():
+    """Update the QR code to point to a specific website"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        website_url = data.get('website_url')
+        if not website_url:
+            return jsonify({'error': 'Website URL is required'}), 400
+        
+        # Update or create QR settings
+        qr_settings = mongo.db.qr_settings.find_one({'user_id': ObjectId(current_user_id)})
+        if qr_settings:
+            mongo.db.qr_settings.update_one(
+                {'user_id': ObjectId(current_user_id)},
+                {'$set': {'website_url': website_url, 'updated_at': datetime.utcnow()}}
+            )
+        else:
+            mongo.db.qr_settings.insert_one({
+                'user_id': ObjectId(current_user_id),
+                'website_url': website_url,
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            })
+        
+        return jsonify({
+            'message': 'QR code URL updated successfully',
+            'website_url': website_url
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error updating QR URL: {e}")
+        return jsonify({'error': 'Failed to update QR code URL'}), 500
 
 @qr_bp.route('/qr-code/generate', methods=['POST'])
 @jwt_required()

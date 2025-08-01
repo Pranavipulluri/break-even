@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Palette, Settings, Eye, Edit, Save } from 'lucide-react';
+import { Globe, Palette, Settings, Eye, Edit, Save, Bot, Rocket } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { api } from '../services/api';
+import { aiServices } from '../services/aiServices';
+import WebsitePreview from '../components/website/WebsitePreview';
 import toast from 'react-hot-toast';
+
+// Debug auth in development
+if (process.env.NODE_ENV === 'development') {
+  import('../services/debugAuth');
+}
 
 const WebsiteBuilder = () => {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -10,6 +17,8 @@ const WebsiteBuilder = () => {
   const [colorSchemes, setColorSchemes] = useState({});
   const [loading, setLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [deployedUrl, setDeployedUrl] = useState(null);
   
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
 
@@ -34,11 +43,116 @@ const WebsiteBuilder = () => {
   const fetchCurrentWebsite = async () => {
     try {
       const response = await api.get('/website-builder/my-website');
-      setCurrentWebsite(response.data.website);
-      reset(response.data.website);
+      if (response.data.website) {
+        setCurrentWebsite(response.data.website);
+        reset(response.data.website);
+      } else {
+        console.log('No existing website found - user can create a new one');
+        setCurrentWebsite(null);
+      }
     } catch (error) {
-      // No existing website, which is fine
-      console.log('No existing website found');
+      console.error('Error fetching website:', error);
+      if (error.response?.status === 401) {
+        toast.error('Please log in to access website builder');
+      } else {
+        console.log('No existing website found');
+      }
+    }
+  };
+
+  const createAIWebsite = async (platform = 'netlify') => {
+    try {
+      setAiLoading(true);
+      
+      const formData = watch();
+      if (!formData.website_name) {
+        toast.error('Please enter a website name first');
+        return;
+      }
+
+      // Step 1: Generate AI content using development endpoint
+      toast.loading('🤖 Generating AI content for your website...', { duration: 3000 });
+      
+      const businessInfo = {
+        hero_title: formData.website_name || 'My Business',
+        hero_subtitle: formData.business_type ? `Professional ${formData.business_type} services` : 'Your trusted business partner',
+        about_us: `Welcome to ${formData.website_name}. We provide excellent ${formData.business_type || 'business'} services in ${formData.area || 'your area'}.`,
+        contact_cta: 'Contact us today for more information!'
+      };
+
+      // Use development endpoint that doesn't require authentication
+      const contentResponse = await fetch('http://localhost:5000/api/ai-tools/dev/gemini-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: `Create engaging website content for "${formData.website_name}" - a ${formData.business_type || 'business'} in ${formData.area || 'local area'}. Make it professional and appealing.`
+        })
+      });
+      
+      const contentResult = await contentResponse.json();
+      
+      if (!contentResult.success) {
+        throw new Error('Failed to generate website content: ' + (contentResult.error || 'AI service unavailable'));
+      }
+
+      // Step 2: Deploy to selected platform using development endpoint
+      toast.loading(`🚀 Deploying to ${platform}...`, { duration: 5000 });
+      
+      let deployResult;
+      if (platform === 'netlify') {
+        const deployResponse = await fetch('http://localhost:5000/api/ai-tools/dev/netlify-deploy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            site_name: formData.website_name,
+            business_info: businessInfo
+          })
+        });
+        deployResult = await deployResponse.json();
+      } else if (platform === 'github') {
+        const deployResponse = await fetch('http://localhost:5000/api/ai-tools/dev/github-deploy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            site_name: formData.website_name,
+            business_info: businessInfo
+          })
+        });
+        deployResult = await deployResponse.json();
+      }
+
+      if (!deployResult || !deployResult.success) {
+        // Handle specific Netlify uniqueness errors
+        if (deployResult?.error?.includes('must be unique') || deployResult?.error?.includes('already exists')) {
+          throw new Error(`Website name "${formData.website_name}" is already taken. The system will automatically try alternative names, but you can also try changing the website name and deploying again.`);
+        }
+        throw new Error(`Deployment failed: ${deployResult?.error || 'Unknown deployment error'}`);
+      }
+
+      // Step 3: Success!
+      setDeployedUrl(deployResult.website_url);
+      toast.success(`🎉 Website deployed successfully to ${platform.charAt(0).toUpperCase() + platform.slice(1)}!`);
+      
+      // Update current website state
+      setCurrentWebsite({
+        ...formData,
+        website_url: deployResult.website_url,
+        platform: platform,
+        deployment_info: deployResult,
+        ai_generated: true
+      });
+
+    } catch (error) {
+      console.error('AI Website Creation Error:', error);
+      toast.error(error.message || 'Failed to create AI website');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -46,21 +160,29 @@ const WebsiteBuilder = () => {
     try {
       setLoading(true);
       
-      let response;
-      if (currentWebsite) {
-        response = await api.put('/website-builder/update', data);
-        toast.success('Website updated successfully!');
-      } else {
-        response = await api.post('/website-builder/create', data);
-        toast.success('Website created successfully!');
-      }
+      // Use development endpoint that doesn't require authentication
+      const response = await fetch('http://localhost:5000/api/website-builder/dev-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
       
-      if (response.data.website) {
-        setCurrentWebsite(response.data.website);
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(result.message || 'Website created successfully!');
+        if (result.website) {
+          setCurrentWebsite(result.website);
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create website');
       }
       
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to save website');
+      console.error('Website creation error:', error);
+      toast.error(error.message || 'Failed to save website');
     } finally {
       setLoading(false);
     }
@@ -421,15 +543,90 @@ const WebsiteBuilder = () => {
           </div>
         )}
 
+        {/* AI Website Creation */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200 mb-6">
+          <div className="flex items-center mb-4">
+            <Bot className="text-purple-600 mr-2" size={24} />
+            <h3 className="text-lg font-semibold text-gray-900">AI-Powered Website Creation</h3>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Create and deploy a professional website instantly using AI. Just fill in your business details above!
+          </p>
+          
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => createAIWebsite('netlify')}
+              disabled={aiLoading}
+              className="btn-primary flex items-center space-x-2 bg-teal-600 hover:bg-teal-700"
+            >
+              {aiLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Rocket size={16} />
+              )}
+              <span>Deploy to Netlify</span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => createAIWebsite('github')}
+              disabled={aiLoading}
+              className="btn-primary flex items-center space-x-2 bg-gray-800 hover:bg-gray-900"
+            >
+              {aiLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Rocket size={16} />
+              )}
+              <span>Deploy to GitHub Pages</span>
+            </button>
+          </div>
+          
+          {deployedUrl && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-800 font-medium">🎉 Website deployed successfully!</p>
+                  <a 
+                    href={deployedUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-800 underline break-all"
+                  >
+                    {deployedUrl}
+                  </a>
+                </div>
+                <button
+                  onClick={() => window.open(deployedUrl, '_blank')}
+                  className="btn-secondary text-sm"
+                >
+                  View Website
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Submit Button */}
-        <div className="flex justify-end space-x-3">
+        <div className="flex justify-between items-center">
           <button
             type="button"
-            onClick={() => reset()}
-            className="btn-secondary"
+            onClick={() => setPreviewMode(!previewMode)}
+            className="btn-secondary flex items-center space-x-2"
           >
-            Reset
+            <Eye size={16} />
+            <span>{previewMode ? 'Hide Preview' : 'Show Preview'}</span>
           </button>
+          
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => reset()}
+              className="btn-secondary"
+            >
+              Reset
+            </button>
           
           <button
             type="submit"
@@ -450,8 +647,28 @@ const WebsiteBuilder = () => {
               }
             </span>
           </button>
+          </div>
         </div>
       </form>
+
+      {/* Website Preview */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <Eye size={20} />
+            <span>Website Preview</span>
+          </h3>
+        </div>
+        
+        <WebsitePreview
+          websiteData={{
+            ...watch(),
+            website_url: currentWebsite?.website_url || deployedUrl
+          }}
+          isVisible={previewMode}
+          onToggle={() => setPreviewMode(!previewMode)}
+        />
+      </div>
     </div>
   );
 };

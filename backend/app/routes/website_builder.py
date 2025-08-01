@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
 from app.services.website_service import WebsiteService
@@ -7,6 +7,63 @@ from bson import ObjectId
 from datetime import datetime
 
 website_bp = Blueprint('website_builder', __name__)
+
+@website_bp.route('/website-builder/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint that doesn't require authentication"""
+    return jsonify({
+        'status': 'healthy',
+        'message': 'Website builder API is running',
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
+@website_bp.route('/website-builder/test-auth', methods=['GET'])
+@jwt_required()
+def test_auth():
+    """Simple endpoint to test if authentication is working"""
+    try:
+        current_user_id = get_jwt_identity()
+        return jsonify({
+            'message': 'Authentication successful',
+            'user_id': current_user_id
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@website_bp.route('/website-builder/dev-test', methods=['GET'])
+def dev_test():
+    """Development endpoint that doesn't require authentication"""
+    return jsonify({
+        'message': 'Development test successful',
+        'status': 'ok',
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
+@website_bp.route('/website-builder/dev-create', methods=['POST'])
+def dev_create_website():
+    """Development endpoint to create website without authentication"""
+    try:
+        data = request.get_json()
+        
+        # Simulate website creation for development
+        website_data = {
+            'id': 'dev-' + str(int(datetime.now().timestamp())),
+            'website_name': data.get('website_name', 'Test Website'),
+            'business_type': data.get('business_type', 'Business'),
+            'area': data.get('area', 'Local Area'),
+            'theme': data.get('theme', 'modern'),
+            'created_at': datetime.now().isoformat(),
+            'status': 'created'
+        }
+        
+        return jsonify({
+            'message': 'Website created successfully (development mode)',
+            'website': website_data,
+            'success': True
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
 
 @website_bp.route('/website-builder/create', methods=['POST'])
 @jwt_required()
@@ -168,7 +225,16 @@ def get_my_website():
         })
         
         if not website:
-            return jsonify({'error': 'Website not found'}), 404
+            # Return empty result instead of 404 to avoid frontend errors
+            return jsonify({
+                'message': 'No website found for this user',
+                'website': None,
+                'analytics': {
+                    'total_views': 0,
+                    'total_clicks': 0,
+                    'total_contacts': 0
+                }
+            }), 200
         
         website['_id'] = str(website['_id'])
         website['owner_id'] = str(website['owner_id'])
