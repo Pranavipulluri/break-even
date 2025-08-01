@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
@@ -302,4 +301,3 @@ def send_bulk_email():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-

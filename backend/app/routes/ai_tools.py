@@ -1,5 +1,5 @@
 #### app/routes/ai_tools.py
-python
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
@@ -343,4 +343,10 @@ def chatbot():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+#### app/routes/customers.py
+
+
+
+#### app/services/ai_service.py
 

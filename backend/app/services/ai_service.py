@@ -1,4 +1,3 @@
-
 import openai
 from flask import current_app
 import json

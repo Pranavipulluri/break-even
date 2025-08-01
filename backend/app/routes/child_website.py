@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, render_template_string
 from app import mongo
 from app.services.website_service import WebsiteService
@@ -239,3 +238,4 @@ def track_product_interaction(website_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+

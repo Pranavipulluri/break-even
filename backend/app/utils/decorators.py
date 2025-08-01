@@ -129,3 +129,4 @@ def handle_exceptions(f):
             logging.error(f"Unexpected error in {f.__name__}: {str(e)}")
             return jsonify({'error': 'Internal server error'}), 500
     return decorated_function
+
