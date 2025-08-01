@@ -6,7 +6,7 @@ from bson import ObjectId
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 
-analytics_bp = Blueprint('analytics', _name_)
+analytics_bp = Blueprint('analytics', __name__)
 
 @analytics_bp.route('/analytics/overview', methods=['GET'])
 @jwt_required()

@@ -7,7 +7,7 @@ from app.utils.validators import validate_email, validate_password
 from bson import ObjectId
 from datetime import datetime
 
-auth_bp = Blueprint('auth', _name_)
+auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():

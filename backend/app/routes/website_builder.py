@@ -6,7 +6,7 @@ from app.models.child_website import ChildWebsite
 from bson import ObjectId
 from datetime import datetime
 
-website_bp = Blueprint('website_builder', _name_)
+website_bp = Blueprint('website_builder', __name__)
 
 @website_bp.route('/website-builder/create', methods=['POST'])
 @jwt_required()

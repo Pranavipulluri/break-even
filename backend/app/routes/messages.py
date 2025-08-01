@@ -7,7 +7,7 @@ from bson import ObjectId
 from datetime import datetime
 from flask_socketio import emit
 
-messages_bp = Blueprint('messages', _name_)
+messages_bp = Blueprint('messages', __name__)
 
 @messages_bp.route('/messages', methods=['GET'])
 @jwt_required()

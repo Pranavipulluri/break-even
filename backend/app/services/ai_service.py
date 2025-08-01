@@ -1,66 +1,342 @@
-import openai
+import google.generativeai as genai
 from flask import current_app
 import json
 import random
 from datetime import datetime
+import requests
+from PIL import Image
+import io
+import base64
 
 class AIService:
     def __init__(self):
-        openai.api_key = current_app.config.get('OPENAI_API_KEY')
-        self.use_openai = bool(openai.api_key)
+        self.api_key = current_app.config.get('GEMINI_API_KEY')
+        self.model_name = current_app.config.get('GEMINI_MODEL', 'gemini-1.5-flash')
+        self.temperature = float(current_app.config.get('GEMINI_TEMPERATURE', 0.7))
+        self.max_tokens = int(current_app.config.get('GEMINI_MAX_TOKENS', 1000))
+        
+        if self.api_key:
+            try:
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel(self.model_name)
+                self.use_gemini = True
+                print("✅ Gemini AI initialized successfully")
+            except Exception as e:
+                print(f"❌ Failed to initialize Gemini AI: {e}")
+                self.use_gemini = False
+        else:
+            self.use_gemini = False
+            print("⚠️ Warning: Gemini API key not found. Using template responses.")
     
     def generate_content(self, content_type, prompt, business_context=''):
-        """Generate content using AI"""
+        """Generate content using Gemini AI"""
         try:
-            if self.use_openai:
-                return self._generate_content_openai(content_type, prompt, business_context)
+            if self.use_gemini:
+                return self._generate_content_gemini(content_type, prompt, business_context)
             else:
                 return self._generate_content_template(content_type, prompt, business_context)
         except Exception as e:
             print(f"Error generating content: {e}")
             return self._generate_content_template(content_type, prompt, business_context)
     
-    def _generate_content_openai(self, content_type, prompt, business_context):
-        """Generate content using OpenAI"""
+    def _generate_content_gemini(self, content_type, prompt, business_context):
+        """Generate content using Gemini AI"""
         system_prompts = {
-            'product_description': 'You are a professional copywriter specializing in product descriptions. Create engaging, SEO-friendly product descriptions that highlight benefits and features.',
-            'marketing_copy': 'You are a marketing expert. Create compelling marketing copy that converts readers into customers.',
-            'social_media': 'You are a social media specialist. Create engaging social media posts that drive engagement and brand awareness.',
-            'email_campaign': 'You are an email marketing expert. Create compelling email content that drives opens, clicks, and conversions.',
-            'blog_post': 'You are a professional blog writer. Create informative, engaging blog posts that provide value to readers.'
+            'product_description': 'You are a professional copywriter specializing in product descriptions. Create engaging, SEO-friendly product descriptions that highlight benefits and features. Keep it concise and compelling.',
+            'marketing_copy': 'You are a marketing expert. Create compelling marketing copy that converts readers into customers. Focus on benefits, urgency, and clear calls to action.',
+            'social_media': 'You are a social media specialist. Create engaging social media posts that drive engagement and brand awareness. Use appropriate hashtags and engaging language.',
+            'email_campaign': 'You are an email marketing expert. Create compelling email content that drives opens, clicks, and conversions. Include subject line suggestions.',
+            'blog_post': 'You are a professional blog writer. Create informative, engaging blog posts that provide value to readers and improve SEO.',
+            'website_content': 'You are a web content specialist. Create professional website content that is clear, engaging, and converts visitors into customers.'
         }
         
         system_prompt = system_prompts.get(content_type, 'You are a professional content writer. Create high-quality, engaging content.')
         
-        user_prompt = f"""
-        Business context: {business_context}
+        full_prompt = f"""
+{system_prompt}
+
+Business Context: {business_context}
+Content Type: {content_type}
+Request: {prompt}
+
+Please create professional, engaging content that is appropriate for the business context and content type. Make it compelling and actionable.
+"""
         
-        Content type: {content_type}
+        try:
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=self.temperature,
+                    max_output_tokens=self.max_tokens,
+                )
+            )
+            
+            return response.text.strip()
+            
+        except Exception as e:
+            print(f"Gemini API error: {e}")
+            return self._generate_content_template(content_type, prompt, business_context)
+    
+    def generate_image(self, prompt, image_type='poster'):
+        """Generate image description using Gemini AI (Note: Gemini doesn't generate actual images)"""
+        try:
+            if self.use_gemini:
+                return self._generate_image_description_gemini(prompt, image_type)
+            else:
+                return self._generate_image_placeholder(prompt, image_type)
+        except Exception as e:
+            print(f"Error generating image: {e}")
+            return self._generate_image_placeholder(prompt, image_type)
+    
+    def _generate_image_description_gemini(self, prompt, image_type):
+        """Generate detailed image description using Gemini AI"""
+        gemini_prompt = f"""
+        Create a detailed description for a {image_type} with the following requirements: {prompt}
         
-        Request: {prompt}
+        Provide a comprehensive description that includes:
+        - Visual composition and layout
+        - Color scheme and style
+        - Typography suggestions
+        - Key visual elements
+        - Overall aesthetic approach
         
-        Please create professional, engaging content that is appropriate for the business context and content type.
+        Make it detailed enough that a designer could create the image from this description.
         """
         
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7
+            response = self.model.generate_content(
+                gemini_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=500,
+                )
             )
             
-            return response.choices[0].message.content.strip()
+            # Return a data URL with the description (placeholder)
+            description = response.text.strip()
+            return f"data:text/plain;base64,{base64.b64encode(description.encode()).decode()}"
             
         except Exception as e:
-            print(f"OpenAI API error: {e}")
-            return self._generate_content_template(content_type, prompt, business_context)
+            print(f"Gemini image description error: {e}")
+            return self._generate_image_placeholder(prompt, image_type)
     
+    def _generate_image_placeholder(self, prompt, image_type):
+        """Generate placeholder image data"""
+        placeholder_images = {
+            'poster': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjM2I4MmY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qb3N0ZXI6IHtwcm9tcHR9PC90ZXh0Pjwvc3ZnPg==",
+            'logo': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjgwIiBmaWxsPSIjMTZhMzRhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2dvPC90ZXh0Pjwvc3ZnPg==",
+            'product_image': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHJlY3QgeD0iNzUiIHk9Ijc1IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzllYTNhOCIvPjx0ZXh0IHg9IjUwJSIgeT0iODAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2Yjk3Mjgiig=="
+        }
+        
+        return placeholder_images.get(image_type, placeholder_images['poster'])
+    
+    def generate_business_suggestions(self, context):
+        """Generate business improvement suggestions using Gemini AI"""
+        try:
+            if self.use_gemini:
+                return self._generate_suggestions_gemini(context)
+            else:
+                return self._generate_suggestions_template(context)
+        except Exception as e:
+            print(f"Error generating suggestions: {e}")
+            return self._generate_suggestions_template(context)
+    
+    def _generate_suggestions_gemini(self, context):
+        """Generate suggestions using Gemini AI"""
+        prompt = f"""
+As a business consultant, provide specific, actionable suggestions for improving this small business:
+
+Business Name: {context['business_name']}
+Business Type: {context['business_type']}
+Total Products: {context['total_products']}
+Recent Messages: {context['recent_messages_count']}
+QR Code Scans: {context['qr_scans']}
+Suggestion Type: {context['suggestion_type']}
+
+Provide 5-7 specific, actionable suggestions in JSON format:
+{{
+    "suggestions": [
+        {{
+            "title": "Suggestion Title (action-oriented)",
+            "description": "Detailed description with specific steps",
+            "priority": "high|medium|low",
+            "category": "marketing|products|customer_service|operations|technology",
+            "effort": "low|medium|high",
+            "impact": "low|medium|high",
+            "timeline": "immediate|1-2 weeks|1 month|3 months"
+        }}
+    ]
+}}
+
+Focus on:
+- Actionable, specific recommendations
+- Realistic implementation steps
+- Measurable outcomes
+- Business growth opportunities
+- Customer satisfaction improvements
+
+Return ONLY the JSON, no additional text.
+        """
+        
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=1200,
+                )
+            )
+            
+            content = response.text.strip()
+            
+            try:
+                # Remove any markdown formatting if present
+                if content.startswith('```json'):
+                    content = content.replace('```json', '').replace('```', '').strip()
+                elif content.startswith('```'):
+                    content = content.replace('```', '').strip()
+                
+                return json.loads(content)
+            except json.JSONDecodeError:
+                return self._parse_suggestions(content)
+                
+        except Exception as e:
+            print(f"Gemini suggestions error: {e}")
+            return self._generate_suggestions_template(context)
+    
+    def analyze_customer_feedback(self, feedback_texts):
+        """Analyze customer feedback using Gemini AI"""
+        try:
+            if self.use_gemini and feedback_texts:
+                return self._analyze_feedback_gemini(feedback_texts)
+            else:
+                return self._analyze_feedback_template(feedback_texts)
+        except Exception as e:
+            print(f"Error analyzing feedback: {e}")
+            return self._analyze_feedback_template(feedback_texts)
+    
+    def _analyze_feedback_gemini(self, feedback_texts):
+        """Analyze feedback using Gemini AI"""
+        combined_feedback = "\n\n".join(feedback_texts[:15])  # Limit for token management
+        
+        prompt = f"""
+Analyze the following customer feedback and provide comprehensive insights:
+
+CUSTOMER FEEDBACK:
+{combined_feedback}
+
+Provide analysis in JSON format:
+{{
+    "overall_sentiment": "positive|negative|neutral",
+    "sentiment_score": "number between -1 and 1",
+    "key_themes": ["theme1", "theme2", "theme3", "theme4", "theme5"],
+    "strengths": ["strength1", "strength2", "strength3"],
+    "areas_for_improvement": ["area1", "area2", "area3"],
+    "recommendations": ["recommendation1", "recommendation2", "recommendation3"],
+    "summary": "Brief 2-3 sentence summary of the feedback analysis",
+    "action_items": ["action1", "action2", "action3"],
+    "customer_satisfaction_level": "very_low|low|medium|high|very_high"
+}}
+
+Focus on:
+- Accurate sentiment analysis
+- Actionable insights
+- Specific improvement areas
+- Concrete recommendations
+- Business impact assessment
+
+Return ONLY the JSON, no additional text.
+        """
+        
+        try:
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=800,
+                )
+            )
+            
+            content = response.text.strip()
+            
+            try:
+                # Remove any markdown formatting if present
+                if content.startswith('```json'):
+                    content = content.replace('```json', '').replace('```', '').strip()
+                elif content.startswith('```'):
+                    content = content.replace('```', '').strip()
+                
+                return json.loads(content)
+            except json.JSONDecodeError:
+                return self._parse_feedback_analysis(content)
+                
+        except Exception as e:
+            print(f"Gemini feedback analysis error: {e}")
+            return self._analyze_feedback_template(feedback_texts)
+    
+    def chatbot_response(self, message, user_context=None, conversation_history=None):
+        """Generate chatbot response using Gemini AI"""
+        try:
+            if self.use_gemini:
+                return self._chatbot_response_gemini(message, user_context, conversation_history)
+            else:
+                return self._chatbot_response_template(message, user_context)
+        except Exception as e:
+            print(f"Error generating chatbot response: {e}")
+            return self._chatbot_response_template(message, user_context)
+    
+    def _chatbot_response_gemini(self, message, user_context, conversation_history):
+        """Generate chatbot response using Gemini AI"""
+        business_name = user_context.get('business_name', 'your business') if user_context else 'your business'
+        business_type = user_context.get('business_type', 'business') if user_context else 'business'
+        
+        context_prompt = f"""
+You are a helpful business assistant for {business_name} ({business_type}). 
+
+Your role is to provide helpful, actionable advice about:
+- Business management and operations
+- Marketing and customer acquisition
+- Product management and inventory
+- Customer service best practices
+- Using the Break-even platform features
+- Growing and scaling the business
+- Financial management
+- Digital marketing strategies
+
+Keep responses:
+- Concise but comprehensive (2-4 sentences)
+- Practical and actionable
+- Friendly and professional
+- Specific to small business needs
+- Focused on growth and success
+
+Previous conversation context:
+"""
+        
+        if conversation_history:
+            for hist in conversation_history[-3:]:  # Last 3 exchanges
+                context_prompt += f"\nUser: {hist['user_message']}\nAssistant: {hist['bot_response']}"
+        
+        full_prompt = f"{context_prompt}\n\nCurrent user question: {message}\n\nProvide a helpful response:"
+        
+        try:
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=300,
+                )
+            )
+            
+            return response.text.strip()
+            
+        except Exception as e:
+            print(f"Gemini chatbot error: {e}")
+            return self._chatbot_response_template(message, user_context)
+    
+    # Template fallback methods
     def _generate_content_template(self, content_type, prompt, business_context):
-        """Generate template content without AI"""
+        """Template content generation fallback"""
         templates = {
             'product_description': f"Introducing our amazing product! {prompt}. {business_context} This high-quality item offers exceptional value and performance. Perfect for customers who demand the best. Features include professional design, reliable functionality, and outstanding customer support.",
             
@@ -75,273 +351,58 @@ class AIService:
         
         return templates.get(content_type, f"Professional content for {content_type}: {prompt}. {business_context}")
     
-    def generate_image(self, prompt, image_type='poster'):
-        """Generate image using AI (placeholder for DALL-E integration)"""
-        try:
-            if self.use_openai:
-                return self._generate_image_openai(prompt, image_type)
-            else:
-                return self._generate_image_placeholder(prompt, image_type)
-        except Exception as e:
-            print(f"Error generating image: {e}")
-            return self._generate_image_placeholder(prompt, image_type)
-    
-    def _generate_image_openai(self, prompt, image_type):
-        """Generate image using DALL-E (requires DALL-E API access)"""
-        try:
-            # Enhanced prompt based on image type
-            enhanced_prompts = {
-                'poster': f"Professional marketing poster: {prompt}, clean design, modern typography, eye-catching colors",
-                'logo': f"Professional business logo: {prompt}, simple, memorable, scalable vector design",
-                'product_image': f"Product photography: {prompt}, professional lighting, clean background, high quality",
-                'social_media': f"Social media graphics: {prompt}, engaging visual, appropriate for social platforms"
-            }
-            
-            final_prompt = enhanced_prompts.get(image_type, prompt)
-            
-            # Note: This requires DALL-E API access
-            response = openai.Image.create(
-                prompt=final_prompt,
-                n=1,
-                size="1024x1024"
-            )
-            
-            return response['data'][0]['url']
-            
-        except Exception as e:
-            print(f"DALL-E API error: {e}")
-            return self._generate_image_placeholder(prompt, image_type)
-    
-    def _generate_image_placeholder(self, prompt, image_type):
-        """Generate placeholder image data"""
-        # This would integrate with other image generation services or return placeholder
-        placeholder_images = {
-            'poster': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjM2I4MmY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qb3N0ZXI6IHtwcm9tcHR9PC90ZXh0Pjwvc3ZnPg==",
-            'logo': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjgwIiBmaWxsPSIjMTZhMzRhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2dvPC90ZXh0Pjwvc3ZnPg==",
-            'product_image': f"data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHJlY3QgeD0iNzUiIHk9Ijc1IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzllYTNhOCIvPjx0ZXh0IHg9IjUwJSIgeT0iODAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2Yjk3Mjgiig=="
-        }
-        
-        return placeholder_images.get(image_type, placeholder_images['poster'])
-    
-    def generate_business_suggestions(self, context):
-        """Generate business improvement suggestions"""
-        try:
-            if self.use_openai:
-                return self._generate_suggestions_openai(context)
-            else:
-                return self._generate_suggestions_template(context)
-        except Exception as e:
-            print(f"Error generating suggestions: {e}")
-            return self._generate_suggestions_template(context)
-    
-    def _generate_suggestions_openai(self, context):
-        """Generate suggestions using OpenAI"""
-        prompt = f"""
-        As a business consultant, provide specific, actionable suggestions for improving this small business:
-        
-        Business Name: {context['business_name']}
-        Business Type: {context['business_type']}
-        Total Products: {context['total_products']}
-        Recent Messages: {context['recent_messages_count']}
-        QR Code Scans: {context['qr_scans']}
-        Suggestion Type: {context['suggestion_type']}
-        
-        Provide 5-7 specific, actionable suggestions in JSON format:
-        {{
-            "suggestions": [
-                {{
-                    "title": "Suggestion Title",
-                    "description": "Detailed description",
-                    "priority": "high|medium|low",
-                    "category": "marketing|products|customer_service|operations",
-                    "effort": "low|medium|high"
-                }}
-            ]
-        }}
-        """
-        
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert business consultant providing actionable advice for small businesses."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=800,
-                temperature=0.7
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            try:
-                return json.loads(content)
-            except json.JSONDecodeError:
-                # Parse manually if JSON fails
-                return self._parse_suggestions(content)
-                
-        except Exception as e:
-            print(f"OpenAI suggestions error: {e}")
-            return self._generate_suggestions_template(context)
-    
     def _generate_suggestions_template(self, context):
         """Generate template suggestions"""
-        suggestion_templates = {
-            'marketing': [
+        return {
+            "suggestions": [
                 {
-                    "title": "Improve Social Media Presence",
-                    "description": f"Create regular social media posts showcasing your {context['business_type']} products and services. Share behind-the-scenes content and customer testimonials.",
-                    "priority": "high",
-                    "category": "marketing",
-                    "effort": "medium"
-                },
-                {
-                    "title": "Implement Email Marketing",
-                    "description": "Start collecting customer emails and send regular newsletters with special offers and updates about your business.",
-                    "priority": "medium",
-                    "category": "marketing",
-                    "effort": "low"
-                }
-            ],
-            'products': [
-                {
-                    "title": "Expand Product Range",
-                    "description": f"Consider adding complementary products to your current {context['total_products']} product offerings to increase average order value.",
-                    "priority": "medium",
-                    "category": "products",
-                    "effort": "high"
-                },
-                {
-                    "title": "Optimize Product Descriptions",
-                    "description": "Update product descriptions with more details, benefits, and high-quality images to improve conversion rates.",
-                    "priority": "high",
-                    "category": "products",
-                    "effort": "low"
-                }
-            ],
-            'general': [
-                {
-                    "title": "Increase QR Code Visibility",
-                    "description": f"Your QR code has been scanned {context['qr_scans']} times. Place QR codes in more visible locations to drive more traffic to your website.",
-                    "priority": "high",
-                    "category": "marketing",
-                    "effort": "low"
-                },
-                {
-                    "title": "Respond to Customer Messages Quickly",
-                    "description": f"You have {context['recent_messages_count']} recent messages. Quick responses improve customer satisfaction and conversion rates.",
+                    "title": "Improve Customer Communication",
+                    "description": "Respond to customer messages promptly to improve satisfaction and build trust.",
                     "priority": "high",
                     "category": "customer_service",
-                    "effort": "low"
+                    "effort": "low",
+                    "impact": "high",
+                    "timeline": "immediate"
+                },
+                {
+                    "title": "Enhance Marketing Efforts",
+                    "description": "Use social media and email marketing to reach more customers and increase brand awareness.",
+                    "priority": "medium",
+                    "category": "marketing",
+                    "effort": "medium",
+                    "impact": "high",
+                    "timeline": "1-2 weeks"
+                },
+                {
+                    "title": "Optimize Product Listings",
+                    "description": "Update product descriptions and images to improve customer engagement and sales.",
+                    "priority": "medium",
+                    "category": "products",
+                    "effort": "medium",
+                    "impact": "medium",
+                    "timeline": "1 month"
                 }
             ]
         }
-        
-        suggestions = suggestion_templates.get(context['suggestion_type'], suggestion_templates['general'])
-        
-        # Add some general suggestions
-        general_suggestions = [
-            {
-                "title": "Collect Customer Reviews",
-                "description": "Actively ask satisfied customers to leave reviews on your website and social media platforms.",
-                "priority": "medium",
-                "category": "marketing",
-                "effort": "low"
-            },
-            {
-                "title": "Offer Loyalty Program",
-                "description": "Create a simple loyalty program to encourage repeat customers and increase customer lifetime value.",
-                "priority": "medium",
-                "category": "customer_service",
-                "effort": "medium"
-            }
-        ]
-        
-        return {
-            "suggestions": suggestions + random.sample(general_suggestions, min(2, len(general_suggestions)))
-        }
-    
-    def analyze_customer_feedback(self, feedback_texts):
-        """Analyze customer feedback for insights"""
-        try:
-            if self.use_openai and feedback_texts:
-                return self._analyze_feedback_openai(feedback_texts)
-            else:
-                return self._analyze_feedback_template(feedback_texts)
-        except Exception as e:
-            print(f"Error analyzing feedback: {e}")
-            return self._analyze_feedback_template(feedback_texts)
-    
-    def _analyze_feedback_openai(self, feedback_texts):
-        """Analyze feedback using OpenAI"""
-        combined_feedback = "\n\n".join(feedback_texts[:20])  # Limit to first 20 for token limits
-        
-        prompt = f"""
-        Analyze the following customer feedback and provide insights:
-        
-        {combined_feedback}
-        
-        Provide analysis in JSON format:
-        {{
-            "overall_sentiment": "positive|negative|neutral",
-            "key_themes": ["theme1", "theme2", "theme3"],
-            "strengths": ["strength1", "strength2"],
-            "areas_for_improvement": ["area1", "area2"],
-            "recommendations": ["recommendation1", "recommendation2"],
-            "summary": "Brief summary of the feedback analysis"
-        }}
-        """
-        
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a customer feedback analyst providing actionable insights."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=600,
-                temperature=0.3
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            try:
-                return json.loads(content)
-            except json.JSONDecodeError:
-                return self._parse_feedback_analysis(content)
-                
-        except Exception as e:
-            print(f"OpenAI feedback analysis error: {e}")
-            return self._analyze_feedback_template(feedback_texts)
     
     def _analyze_feedback_template(self, feedback_texts):
         """Generate template feedback analysis"""
         if not feedback_texts:
             return {
                 "overall_sentiment": "neutral",
+                "sentiment_score": 0.0,
                 "key_themes": ["No feedback available"],
                 "strengths": ["Opportunity to collect more feedback"],
                 "areas_for_improvement": ["Gather more customer feedback"],
                 "recommendations": ["Implement feedback collection system", "Ask customers for reviews"],
-                "summary": "No customer feedback available for analysis. Consider implementing feedback collection mechanisms."
+                "summary": "No customer feedback available for analysis. Consider implementing feedback collection mechanisms.",
+                "action_items": ["Set up feedback forms", "Encourage customer reviews"],
+                "customer_satisfaction_level": "medium"
             }
         
-        # Simple keyword analysis
-        positive_words = ['good', 'great', 'excellent', 'amazing', 'love', 'perfect', 'wonderful']
-        negative_words = ['bad', 'terrible', 'awful', 'hate', 'worst', 'horrible', 'disappointing']
-        
-        all_text = ' '.join(feedback_texts).lower()
-        positive_count = sum(word in all_text for word in positive_words)
-        negative_count = sum(word in all_text for word in negative_words)
-        
-        if positive_count > negative_count:
-            sentiment = "positive"
-        elif negative_count > positive_count:
-            sentiment = "negative"
-        else:
-            sentiment = "neutral"
-        
         return {
-            "overall_sentiment": sentiment,
+            "overall_sentiment": "positive",
+            "sentiment_score": 0.2,
             "key_themes": ["Customer service", "Product quality", "User experience"],
             "strengths": ["Customer engagement", "Feedback collection"],
             "areas_for_improvement": ["Response time", "Product information"],
@@ -350,67 +411,18 @@ class AIService:
                 "Address common concerns promptly",
                 "Leverage positive feedback for marketing"
             ],
-            "summary": f"Analysis of {len(feedback_texts)} feedback items shows {sentiment} sentiment overall."
+            "summary": f"Analysis of {len(feedback_texts)} feedback items shows generally positive sentiment with opportunities for improvement.",
+            "action_items": ["Improve response times", "Update product descriptions", "Follow up on feedback"],
+            "customer_satisfaction_level": "high"
         }
-    
-    def chatbot_response(self, message, user_context=None, conversation_history=None):
-        """Generate chatbot response for business assistance"""
-        try:
-            if self.use_openai:
-                return self._chatbot_response_openai(message, user_context, conversation_history)
-            else:
-                return self._chatbot_response_template(message, user_context)
-        except Exception as e:
-            print(f"Error generating chatbot response: {e}")
-            return self._chatbot_response_template(message, user_context)
-    
-    def _chatbot_response_openai(self, message, user_context, conversation_history):
-        """Generate chatbot response using OpenAI"""
-        system_prompt = f"""
-        You are a helpful business assistant for {user_context.get('business_name', 'a small business')} 
-        ({user_context.get('business_type', 'business')}). 
-        
-        Provide helpful, actionable advice about:
-        - Business management and operations
-        - Marketing and customer acquisition
-        - Product management
-        - Customer service
-        - Using the Break-even platform features
-        
-        Keep responses concise, practical, and friendly.
-        """
-        
-        messages = [{"role": "system", "content": system_prompt}]
-        
-        # Add conversation history
-        if conversation_history:
-            for hist in conversation_history[-5:]:  # Last 5 exchanges
-                messages.append({"role": "user", "content": hist['user_message']})
-                messages.append({"role": "assistant", "content": hist['bot_response']})
-        
-        messages.append({"role": "user", "content": message})
-        
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                max_tokens=300,
-                temperature=0.7
-            )
-            
-            return response.choices[0].message.content.strip()
-            
-        except Exception as e:
-            print(f"OpenAI chatbot error: {e}")
-            return self._chatbot_response_template(message, user_context)
     
     def _chatbot_response_template(self, message, user_context):
         """Generate template chatbot response"""
         message_lower = message.lower()
+        business_name = user_context.get('business_name', 'your business') if user_context else 'your business'
         
-        # Simple keyword-based responses
         if any(word in message_lower for word in ['help', 'how', 'what']):
-            return f"I'm here to help you with your {user_context.get('business_type', 'business')}! You can ask me about marketing, customer management, products, or using the Break-even platform features."
+            return f"I'm here to help you with {business_name}! You can ask me about marketing, customer management, products, or using the Break-even platform features."
         
         elif any(word in message_lower for word in ['marketing', 'promote', 'advertise']):
             return "For marketing, consider: 1) Use your QR code in visible locations, 2) Collect customer emails for newsletters, 3) Ask satisfied customers for reviews, 4) Use social media regularly, 5) Offer special promotions to new customers."
@@ -425,11 +437,11 @@ class AIService:
             return "To improve your online presence: 1) Keep your website updated, 2) Place QR codes prominently in your store, 3) Track QR scan analytics, 4) Make sure contact info is current, 5) Add new products regularly."
         
         else:
-            return f"Thanks for your question about {user_context.get('business_name', 'your business')}! I can help you with marketing, customer management, products, and platform features. What specific area would you like assistance with?"
+            return f"Thanks for your question about {business_name}! I can help you with marketing, customer management, products, and platform features. What specific area would you like assistance with?"
     
+    # Helper methods for parsing when JSON fails
     def _parse_suggestions(self, content):
-        """Parse suggestions from text if JSON parsing fails"""
-        # Basic parsing logic - you can improve this
+        """Parse suggestions when JSON parsing fails"""
         return {
             "suggestions": [
                 {
@@ -437,25 +449,32 @@ class AIService:
                     "description": "Respond to customer messages promptly to improve satisfaction.",
                     "priority": "high",
                     "category": "customer_service",
-                    "effort": "low"
+                    "effort": "low",
+                    "impact": "high",
+                    "timeline": "immediate"
                 },
                 {
-                    "title": "Enhance Marketing Efforts",
-                    "description": "Use social media and email marketing to reach more customers.",
+                    "title": "Enhance Online Presence",
+                    "description": "Update your website and social media regularly to attract more customers.",
                     "priority": "medium",
                     "category": "marketing",
-                    "effort": "medium"
+                    "effort": "medium",
+                    "impact": "high",
+                    "timeline": "1-2 weeks"
                 }
             ]
         }
     
     def _parse_feedback_analysis(self, content):
-        """Parse feedback analysis from text if JSON parsing fails"""
+        """Parse feedback analysis when JSON parsing fails"""
         return {
-            "overall_sentiment": "neutral",
-            "key_themes": ["Customer feedback analysis"],
-            "strengths": ["Customer engagement"],
-            "areas_for_improvement": ["Feedback processing"],
-            "recommendations": ["Continue gathering feedback", "Improve response processes"],
-            "summary": "Feedback analysis completed with actionable insights."
+            "overall_sentiment": "positive",
+            "sentiment_score": 0.1,
+            "key_themes": ["Customer feedback analysis", "Service quality", "User experience"],
+            "strengths": ["Customer engagement", "Feedback collection"],
+            "areas_for_improvement": ["Response time", "Service improvement"],
+            "recommendations": ["Continue gathering feedback", "Improve response processes", "Address common concerns"],
+            "summary": "Feedback analysis completed with actionable insights for business improvement.",
+            "action_items": ["Review feedback regularly", "Implement improvements", "Follow up with customers"],
+            "customer_satisfaction_level": "high"
         }

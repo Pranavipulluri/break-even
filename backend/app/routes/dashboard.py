@@ -5,7 +5,7 @@ from bson import ObjectId
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-dashboard_bp = Blueprint('dashboard', _name_)
+dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
