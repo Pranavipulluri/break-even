@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_pymongo import PyMongo
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -19,7 +19,25 @@ def create_app(config_class=Config):
     # Initialize extensions with app
     mongo.init_app(app)
     jwt.init_app(app)
-    CORS(app, origins=["http://localhost:3000", "https://your-frontend-domain.com"])
+    
+    # Configure CORS with flexible port handling
+    allowed_origins = [
+        "http://localhost:3000", 
+        "http://localhost:3001", 
+        "http://localhost:3002",
+        "http://localhost:3003",  # Just in case React increments further
+        "http://127.0.0.1:3000", 
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",
+        "http://127.0.0.1:3003"
+    ]
+    
+    CORS(app, 
+         origins=allowed_origins,
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         allow_headers=['Content-Type', 'Authorization'],
+         supports_credentials=True)
+    
     mail.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
     
@@ -66,6 +84,11 @@ def create_app(config_class=Config):
     def handle_leave_room(user_id):
         leave_room(user_id)
         print(f'User {user_id} left their room')
+
+    # Add health check endpoint
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        return jsonify({'status': 'healthy', 'service': 'break-even-backend'}), 200
 
     # Initialize database on first run
     with app.app_context():

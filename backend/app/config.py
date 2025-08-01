@@ -18,5 +18,15 @@ class Config:
     # OpenAI API
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     
+    # Gemini AI API
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'AIzaSyD25Qkutz-mjpOz8ELQVWmocw0hBoFAG2A'
+    
+    # GitHub API
+    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN') or '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'
+    
+    # Netlify API
+    NETLIFY_API_KEY = os.environ.get('NETLIFY_API_KEY') or 'nfp_tHbhsuDnH1k8SLeyb7VeqtGxDaoHqyxBadfc'
+    
     # Website builder settings
     WEBSITE_BASE_URL = os.environ.get('WEBSITE_BASE_URL') or 'http://localhost:3001'
+    FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:3001'

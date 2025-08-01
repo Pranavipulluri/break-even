@@ -4,12 +4,262 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
 from app.services.ai_service import AIService
+from app.services.gemini_service import get_gemini_service
+from app.services.github_service import get_github_service
+from app.services.netlify_service import get_netlify_service
 from bson import ObjectId
 from datetime import datetime
 import base64
 import io
 
 ai_bp = Blueprint('ai_tools', __name__)
+
+# Development endpoints (no auth required)
+@ai_bp.route('/ai-tools/dev/test', methods=['GET'])
+def dev_test():
+    """Development test endpoint"""
+    return jsonify({
+        'message': 'AI tools development test successful',
+        'services': ['gemini', 'github', 'netlify'],
+        'timestamp': datetime.utcnow().isoformat()
+    }), 200
+
+@ai_bp.route('/ai-tools/dev/gemini-test', methods=['POST'])
+def dev_gemini_test():
+    """Test Gemini AI without authentication"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', 'Say hello and confirm you are working!')
+        
+        result = get_gemini_service().generate_content(prompt)
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@ai_bp.route('/ai-tools/dev/netlify-deploy', methods=['POST'])
+def dev_netlify_deploy():
+    """Test Netlify deployment without authentication"""
+    try:
+        data = request.get_json()
+        site_name = data.get('site_name', 'Test Site')
+        business_info = data.get('business_info', {
+            'hero_title': 'Test Website',
+            'hero_subtitle': 'Testing deployment',
+            'about_us': 'This is a test.',
+            'contact_cta': 'Contact us!'
+        })
+        
+        result = get_netlify_service().create_and_deploy_website(site_name, business_info)
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@ai_bp.route('/ai-tools/dev/github-deploy', methods=['POST'])
+def dev_github_deploy():
+    """Test GitHub deployment without authentication"""
+    try:
+        data = request.get_json()
+        site_name = data.get('site_name', 'Test Site')
+        business_info = data.get('business_info', {
+            'hero_title': 'Test Website',
+            'hero_subtitle': 'Testing deployment',
+            'about_us': 'This is a test.',
+            'contact_cta': 'Contact us!'
+        })
+        
+        result = get_github_service().create_website_repository(site_name, business_info)
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+# Production endpoints (auth required)
+@ai_bp.route('/ai-tools/gemini/generate-content', methods=['POST'])
+@jwt_required()
+def gemini_generate_content():
+    """Generate content using Gemini AI"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        prompt = data.get('prompt')
+        max_tokens = data.get('max_tokens', 1000)
+        
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        result = get_gemini_service().generate_content(prompt, max_tokens)
+        
+        # Save generation to database
+        generation_record = {
+            'user_id': ObjectId(current_user_id),
+            'service': 'gemini',
+            'prompt': prompt,
+            'result': result,
+            'created_at': datetime.utcnow()
+        }
+        mongo.db.ai_generations.insert_one(generation_record)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/gemini/business-description', methods=['POST'])
+@jwt_required()
+def gemini_business_description():
+    """Generate business description using Gemini AI"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        business_name = data.get('business_name')
+        business_type = data.get('business_type')
+        key_features = data.get('key_features')
+        
+        if not business_name or not business_type:
+            return jsonify({'error': 'Business name and type are required'}), 400
+        
+        result = get_gemini_service().generate_business_description(
+            business_name, business_type, key_features
+        )
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/gemini/website-content', methods=['POST'])
+@jwt_required()
+def gemini_website_content():
+    """Generate website content using Gemini AI"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        business_info = data.get('business_info', {})
+        
+        if not business_info.get('name'):
+            return jsonify({'error': 'Business name is required'}), 400
+        
+        result = get_gemini_service().generate_website_content(business_info)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/gemini/social-media', methods=['POST'])
+@jwt_required()
+def gemini_social_media():
+    """Generate social media content using Gemini AI"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        business_name = data.get('business_name')
+        business_type = data.get('business_type')
+        occasion = data.get('occasion')
+        
+        if not business_name or not business_type:
+            return jsonify({'error': 'Business name and type are required'}), 400
+        
+        result = get_gemini_service().generate_social_media_content(
+            business_name, business_type, occasion
+        )
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/github/create-website', methods=['POST'])
+@jwt_required()
+def github_create_website():
+    """Create and deploy website using GitHub Pages"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        business_name = data.get('business_name')
+        website_content = data.get('website_content', {})
+        
+        if not business_name:
+            return jsonify({'error': 'Business name is required'}), 400
+        
+        result = get_github_service().create_website_repository(business_name, website_content)
+        
+        # Save deployment record
+        if result['success']:
+            deployment_record = {
+                'user_id': ObjectId(current_user_id),
+                'service': 'github',
+                'business_name': business_name,
+                'repository': result['repository'],
+                'website_url': result['website_url'],
+                'created_at': datetime.utcnow()
+            }
+            mongo.db.deployments.insert_one(deployment_record)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/netlify/deploy-website', methods=['POST'])
+@jwt_required()
+def netlify_deploy_website():
+    """Deploy website using Netlify"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        business_name = data.get('business_name')
+        website_content = data.get('website_content', {})
+        
+        if not business_name:
+            return jsonify({'error': 'Business name is required'}), 400
+        
+        result = get_netlify_service().create_and_deploy_website(business_name, website_content)
+        
+        # Save deployment record
+        if result['success']:
+            deployment_record = {
+                'user_id': ObjectId(current_user_id),
+                'service': 'netlify',
+                'business_name': business_name,
+                'site_info': result['site'],
+                'website_url': result['website_url'],
+                'created_at': datetime.utcnow()
+            }
+            mongo.db.deployments.insert_one(deployment_record)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@ai_bp.route('/ai-tools/deployments', methods=['GET'])
+@jwt_required()
+def get_user_deployments():
+    """Get user's deployment history"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        deployments = list(mongo.db.deployments.find(
+            {'user_id': ObjectId(current_user_id)},
+            {'_id': 0}
+        ).sort('created_at', -1).limit(10))
+        
+        return jsonify({
+            'success': True,
+            'deployments': deployments
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @ai_bp.route('/ai-tools/generate-content', methods=['POST'])
 @jwt_required()

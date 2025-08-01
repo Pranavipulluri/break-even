@@ -14,6 +14,16 @@ def register():
     try:
         data = request.get_json()
         
+        # Validate input data exists
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Check required fields
+        required_fields = ['email', 'password', 'name']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+        
         # Validate input
         if not validate_email(data.get('email')):
             return jsonify({'error': 'Invalid email format'}), 400
@@ -33,11 +43,12 @@ def register():
             business_name=data.get('business_name'),
             phone=data.get('phone')
         )
+        
         # Insert user into database
-        result = mongo.db.users.insert_one({
-            **user.to_dict(),
-            'password_hash': user.password_hash
-        })
+        user_data = user.to_dict()
+        user_data['password_hash'] = user.password_hash
+        
+        result = mongo.db.users.insert_one(user_data)
         
         # Create access token
         access_token = create_access_token(identity=str(result.inserted_id))
@@ -47,6 +58,10 @@ def register():
             'token': access_token,
             'user': user.to_dict()
         }), 201
+        
+    except Exception as e:
+        print(f"Registration error: {str(e)}")  # Log the error
+        return jsonify({'error': 'Internal server error during registration'}), 500
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

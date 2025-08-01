@@ -9,7 +9,10 @@ const QRCode = () => {
   const { user } = useAuth();
   const [qrData, setQrData] = useState(null);
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [deployedWebsites, setDeployedWebsites] = useState([]);
+  const [selectedWebsiteUrl, setSelectedWebsiteUrl] = useState('');
   const [qrSize, setQrSize] = useState(256);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchQRData();
@@ -17,11 +20,46 @@ const QRCode = () => {
 
   const fetchQRData = async () => {
     try {
-      const response = await api.get('/qr-code');
-      setQrData(response.data);
-      setWebsiteUrl(response.data.websiteUrl);
+      // Use development endpoint for now
+      const response = await fetch('http://localhost:5000/api/qr-code/dev');
+      const data = await response.json();
+      
+      setQrData(data);
+      setWebsiteUrl(data.websiteUrl);
+      setDeployedWebsites(data.deployedWebsites || []);
+      setSelectedWebsiteUrl(data.websiteUrl);
     } catch (error) {
+      console.error('QR fetch error:', error);
       toast.error('Failed to fetch QR code data');
+    }
+  };
+
+  const updateQRUrl = async (newUrl) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('http://localhost:5000/api/qr-code/dev/update-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ website_url: newUrl })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        setWebsiteUrl(newUrl);
+        setSelectedWebsiteUrl(newUrl);
+        toast.success('QR code updated successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to update QR code');
+      }
+    } catch (error) {
+      console.error('QR update error:', error);
+      toast.error(error.message || 'Failed to update QR code');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,6 +196,59 @@ const QRCode = () => {
                   </a>
                 </div>
               </div>
+
+              {deployedWebsites.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Deployed Website for QR Code
+                  </label>
+                  <div className="space-y-2">
+                    {deployedWebsites.map((website) => (
+                      <div key={website.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{website.name}</div>
+                          <div className="text-sm text-gray-500 truncate">{website.url}</div>
+                          <div className="text-xs text-gray-400 flex items-center space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              website.platform === 'netlify' ? 'bg-teal-100 text-teal-800' :
+                              website.platform === 'github' ? 'bg-gray-100 text-gray-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {website.platform}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => updateQRUrl(website.url)}
+                          disabled={loading || websiteUrl === website.url}
+                          className={`ml-3 px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                            websiteUrl === website.url
+                              ? 'bg-green-100 text-green-800 cursor-default'
+                              : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                          }`}
+                        >
+                          {websiteUrl === website.url ? 'Current' : 'Use This'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 text-sm text-gray-600">
+                    💡 Tip: Deploy a website from the Website Builder, then select it here to update your QR code.
+                  </div>
+                </div>
+              )}
+
+              {deployedWebsites.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="text-sm text-blue-800">
+                    <strong>No deployed websites found.</strong>
+                  </div>
+                  <div className="text-sm text-blue-600 mt-1">
+                    Go to the Website Builder and deploy a website to Netlify or GitHub Pages, then return here to update your QR code.
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
