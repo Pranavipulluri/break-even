@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Share2, Copy, ExternalLink } from 'lucide-react';
+import { Download, Share2, Copy, ExternalLink, QrCode as QrCodeIcon, Zap, Palette, Settings, BarChart3 } from 'lucide-react';
 import QRCodeReact from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -9,10 +9,26 @@ const QRCode = () => {
   const { user } = useAuth();
   const [qrData, setQrData] = useState(null);
   const [websiteUrl, setWebsiteUrl] = useState('');
-  const [deployedWebsites, setDeployedWebsites] = useState([]);
-  const [selectedWebsiteUrl, setSelectedWebsiteUrl] = useState('');
   const [qrSize, setQrSize] = useState(256);
-  const [loading, setLoading] = useState(false);
+  const [qrColor, setQrColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('#ffffff');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('square');
+
+  const qrStyles = [
+    { id: 'square', name: 'Square', preview: '⬛' },
+    { id: 'rounded', name: 'Rounded', preview: '🔲' },
+    { id: 'dots', name: 'Dots', preview: '⚫' },
+    { id: 'circular', name: 'Circular', preview: '⭕' },
+  ];
+
+  const colorPresets = [
+    { name: 'Classic', fg: '#000000', bg: '#ffffff' },
+    { name: 'Blue', fg: '#3b82f6', bg: '#eff6ff' },
+    { name: 'Green', fg: '#10b981', bg: '#ecfdf5' },
+    { name: 'Purple', fg: '#8b5cf6', bg: '#f3e8ff' },
+    { name: 'Red', fg: '#ef4444', bg: '#fef2f2' },
+  ];
 
   useEffect(() => {
     fetchQRData();
@@ -20,46 +36,11 @@ const QRCode = () => {
 
   const fetchQRData = async () => {
     try {
-      // Use development endpoint for now
-      const response = await fetch('http://localhost:5000/api/qr-code/dev');
-      const data = await response.json();
-      
-      setQrData(data);
-      setWebsiteUrl(data.websiteUrl);
-      setDeployedWebsites(data.deployedWebsites || []);
-      setSelectedWebsiteUrl(data.websiteUrl);
+      const response = await api.get('/qr-code');
+      setQrData(response.data);
+      setWebsiteUrl(response.data.websiteUrl);
     } catch (error) {
-      console.error('QR fetch error:', error);
       toast.error('Failed to fetch QR code data');
-    }
-  };
-
-  const updateQRUrl = async (newUrl) => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch('http://localhost:5000/api/qr-code/dev/update-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ website_url: newUrl })
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setWebsiteUrl(newUrl);
-        setSelectedWebsiteUrl(newUrl);
-        toast.success('QR code updated successfully!');
-      } else {
-        throw new Error(result.error || 'Failed to update QR code');
-      }
-    } catch (error) {
-      console.error('QR update error:', error);
-      toast.error(error.message || 'Failed to update QR code');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -73,13 +54,15 @@ const QRCode = () => {
     downloadLink.href = pngUrl;
     downloadLink.download = `${user?.businessName || 'business'}-qr-code.png`;
     document.body.appendChild(downloadLink);
-    downloadLink.click();
+    downloadLink.click(); 
     document.body.removeChild(downloadLink);
+    
+    toast.success('QR code downloaded! 📱');
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard!');
+    toast.success('Copied to clipboard! 📋');
   };
 
   const shareQR = async () => {
@@ -98,79 +81,111 @@ const QRCode = () => {
     }
   };
 
+  const applyColorPreset = (preset) => {
+    setQrColor(preset.fg);
+    setBgColor(preset.bg);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">QR Code</h1>
-        <p className="text-gray-600 mt-2">Your business QR code for customer access</p>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="heading-1 mb-4">QR Code Studio</h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Create beautiful, customizable QR codes for your business. 
+          Drive customers from physical locations to your digital presence.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* QR Code Display */}
-        <div className="card text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Business QR Code</h3>
-          
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-white rounded-xl shadow-sm border-2 border-gray-200">
-              <QRCodeReact
-                id="qr-code"
-                value={websiteUrl}
-                size={qrSize}
-                bgColor="#ffffff"
-                fgColor="#000000"
-                level="M"
-                includeMargin={true}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                QR Code Size
-              </label>
-              <input
-                type="range"
-                min="128"
-                max="512"
-                value={qrSize}
-                onChange={(e) => setQrSize(parseInt(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-sm text-gray-500 mt-1">
-                <span>128px</span>
-                <span>{qrSize}px</span>
-                <span>512px</span>
+              <p className="text-blue-100 text-sm font-medium">Total Scans</p>
+              <p className="text-3xl font-bold">{qrData?.totalScans || 0}</p>
+            </div>
+            <QrCodeIcon className="text-blue-200" size={32} />
+          </div>
+        </div>
+        
+        <div className="card bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Today's Scans</p>
+              <p className="text-3xl font-bold">{qrData?.scansToday || 0}</p>
+            </div>
+            <BarChart3 className="text-green-200" size={32} />
+          </div>
+        </div>
+        
+        <div className="card bg-gradient-to-br from-purple-500 to-pink-600 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-medium">Conversion Rate</p>
+              <p className="text-3xl font-bold">12.5%</p>
+            </div>
+            <Zap className="text-purple-200" size={32} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* QR Code Generator */}
+        <div className="space-y-6">
+          <div className="card">
+            <h3 className="heading-3 text-gray-900 mb-6 flex items-center space-x-2">
+              <QrCodeIcon className="text-primary-600" size={24} />
+              <span>Your QR Code</span>
+            </h3>
+            
+            <div className="text-center mb-6">
+              <div className="inline-block p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-inner border-2 border-gray-100">
+                <QRCodeReact
+                  id="qr-code"
+                  value={websiteUrl}
+                  size={qrSize}
+                  bgColor={bgColor}
+                  fgColor={qrColor}
+                  level="M"
+                  includeMargin={true}
+                  imageSettings={logoUrl ? {
+                    src: logoUrl,
+                    x: null,
+                    y: null,
+                    height: qrSize * 0.15,
+                    width: qrSize * 0.15,
+                    excavate: true,
+                  } : undefined}
+                />
               </div>
             </div>
 
-            <div className="flex space-x-2">
+            <div className="flex space-x-3">
               <button
                 onClick={downloadQR}
-                className="btn-primary flex items-center space-x-2 flex-1"
+                className="btn-primary flex-1 flex items-center justify-center space-x-2"
               >
-                <Download size={16} />
+                <Download size={18} />
                 <span>Download</span>
               </button>
               <button
                 onClick={shareQR}
-                className="btn-secondary flex items-center space-x-2 flex-1"
+                className="btn-secondary flex items-center justify-center space-x-2 px-4"
               >
-                <Share2 size={16} />
+                <Share2 size={18} />
                 <span>Share</span>
               </button>
             </div>
           </div>
-        </div>
 
-        {/* QR Code Information */}
-        <div className="space-y-6">
+          {/* Website Info */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Website Information</h3>
+            <h3 className="heading-3 text-gray-900 mb-6">Website Information</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Website URL
                 </label>
                 <div className="flex items-center space-x-2">
@@ -178,128 +193,172 @@ const QRCode = () => {
                     type="text"
                     value={websiteUrl}
                     readOnly
-                    className="input-field flex-1"
+                    className="input-field flex-1 bg-gray-50"
                   />
                   <button
                     onClick={() => copyToClipboard(websiteUrl)}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                   >
-                    <Copy size={16} />
+                    <Copy size={18} />
                   </button>
                   <a
                     href={websiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
                   >
-                    <ExternalLink size={16} />
+                    <ExternalLink size={18} />
                   </a>
                 </div>
               </div>
 
-              {deployedWebsites.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Deployed Website for QR Code
-                  </label>
-                  <div className="space-y-2">
-                    {deployedWebsites.map((website) => (
-                      <div key={website.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">{website.name}</div>
-                          <div className="text-sm text-gray-500 truncate">{website.url}</div>
-                          <div className="text-xs text-gray-400 flex items-center space-x-2">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              website.platform === 'netlify' ? 'bg-teal-100 text-teal-800' :
-                              website.platform === 'github' ? 'bg-gray-100 text-gray-800' :
-                              'bg-blue-100 text-blue-800'
-                            }`}>
-                              {website.platform}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => updateQRUrl(website.url)}
-                          disabled={loading || websiteUrl === website.url}
-                          className={`ml-3 px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                            websiteUrl === website.url
-                              ? 'bg-green-100 text-green-800 cursor-default'
-                              : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                          }`}
-                        >
-                          {websiteUrl === website.url ? 'Current' : 'Use This'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-3 text-sm text-gray-600">
-                    💡 Tip: Deploy a website from the Website Builder, then select it here to update your QR code.
-                  </div>
-                </div>
-              )}
-
-              {deployedWebsites.length === 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="text-sm text-blue-800">
-                    <strong>No deployed websites found.</strong>
-                  </div>
-                  <div className="text-sm text-blue-600 mt-1">
-                    Go to the Website Builder and deploy a website to Netlify or GitHub Pages, then return here to update your QR code.
-                  </div>
-                </div>
-              )}
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Business Name
                 </label>
                 <input
                   type="text"
                   value={user?.businessName || ''}
                   readOnly
-                  className="input-field"
+                  className="input-field bg-gray-50"
                 />
               </div>
+            </div>
+          </div>
+        </div>
 
+        {/* Customization Panel */}
+        <div className="space-y-6">
+          <div className="card">
+            <h3 className="heading-3 text-gray-900 mb-6 flex items-center space-x-2">
+              <Palette className="text-purple-600" size={24} />
+              <span>Customize Design</span>
+            </h3>
+
+            <div className="space-y-6">
+              {/* Size Slider */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  QR Scans Today
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Size: {qrSize}px
                 </label>
-                <div className="text-2xl font-bold text-primary-600">
-                  {qrData?.scansToday || 0}
+                <input
+                  type="range"
+                  min="128"
+                  max="512"
+                  value={qrSize}
+                  onChange={(e) => setQrSize(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-sm text-gray-500 mt-1">
+                  <span>128px</span>
+                  <span>512px</span>
                 </div>
               </div>
 
+              {/* Color Presets */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Total QR Scans
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Color Presets
                 </label>
-                <div className="text-2xl font-bold text-gray-900">
-                  {qrData?.totalScans || 0}
+                <div className="grid grid-cols-5 gap-2">
+                  {colorPresets.map((preset, index) => (
+                    <button
+                      key={index}
+                      onClick={() => applyColorPreset(preset)}
+                      className="aspect-square rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-colors relative overflow-hidden group"
+                      style={{ backgroundColor: preset.bg }}
+                    >
+                      <div 
+                        className="absolute inset-2 rounded-lg"
+                        style={{ backgroundColor: preset.fg }}
+                      ></div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-xl"></div>
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              {/* Custom Colors */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Foreground Color
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={qrColor}
+                      onChange={(e) => setQrColor(e.target.value)}
+                      className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={qrColor}
+                      onChange={(e) => setQrColor(e.target.value)}
+                      className="input-field flex-1 font-mono text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Background Color
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={bgColor}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={bgColor}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="input-field flex-1 font-mono text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Logo URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  className="input-field"
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Add your business logo to the center of the QR code
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage Tips</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
+          {/* Usage Tips */}
+          <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+            <h3 className="heading-3 text-indigo-900 mb-4">💡 Usage Tips</h3>
+            <ul className="space-y-3 text-sm text-indigo-800">
               <li className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Print your QR code and display it prominently at your business location</span>
+                <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                <span>Print your QR code at least 2cm x 2cm for reliable scanning</span>
               </li>
               <li className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Include the QR code on business cards, flyers, and promotional materials</span>
+                <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                <span>Display prominently at your business entrance and checkout</span>
               </li>
               <li className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Make sure the QR code is large enough to scan easily (minimum 2cm x 2cm)</span>
+                <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                <span>Include on business cards, flyers, and promotional materials</span>
               </li>
               <li className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0"></div>
-                <span>Test your QR code regularly to ensure it works properly</span>
+                <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                <span>Test scanning from different devices before printing</span>
               </li>
             </ul>
           </div>
@@ -309,4 +368,4 @@ const QRCode = () => {
   );
 };
 
-export default QRCode;
+export default QRCode;
