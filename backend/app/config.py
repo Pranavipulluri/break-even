@@ -19,4 +19,4 @@ class Config:
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     
     # Website builder settings
-    WEBSITE_BASE_URL = os.environ.get('WEBSITE_BASE_URL') or 'http://localhost:3001'l
+    WEBSITE_BASE_URL = os.environ.get('WEBSITE_BASE_URL') or 'http://localhost:3001'

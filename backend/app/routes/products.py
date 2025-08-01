@@ -6,7 +6,7 @@ from app.models.product import Product
 from bson import ObjectId
 from datetime import datetime
 
-products_bp = Blueprint('products', _name_)
+products_bp = Blueprint('products', __name__)
 
 @products_bp.route('/products', methods=['GET'])
 @jwt_required()

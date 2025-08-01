@@ -1,26 +1,37 @@
-import openai
+import google.generativeai as genai
 from flask import current_app
 import json
 from datetime import datetime
 
 class WebsiteService:
     def __init__(self):
-        openai.api_key = current_app.config.get('OPENAI_API_KEY')
-        self.use_openai = bool(openai.api_key)
+        self.api_key = current_app.config.get('GEMINI_API_KEY')
+        self.model_name = current_app.config.get('GEMINI_MODEL', 'gemini-1.5-flash')
+        
+        if self.api_key:
+            try:
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel(self.model_name)
+                self.use_gemini = True
+            except Exception as e:
+                print(f"Failed to initialize Gemini for website service: {e}")
+                self.use_gemini = False
+        else:
+            self.use_gemini = False
     
     def generate_website_content(self, business_type, business_name, description, area):
-        """Generate website content using AI"""
+        """Generate website content using Gemini AI"""
         try:
-            if self.use_openai:
-                return self._generate_with_openai(business_type, business_name, description, area)
+            if self.use_gemini:
+                return self._generate_with_gemini(business_type, business_name, description, area)
             else:
                 return self._generate_template_content(business_type, business_name, description, area)
         except Exception as e:
             print(f"Error generating website content: {e}")
             return self._generate_template_content(business_type, business_name, description, area)
     
-    def _generate_with_openai(self, business_type, business_name, description, area):
-        """Generate content using OpenAI"""
+    def _generate_with_gemini(self, business_type, business_name, description, area):
+        """Generate content using Gemini AI"""
         prompt = f"""
         Create website content for a {business_type} business called "{business_name}" located in {area}.
         Business description: {description}
@@ -44,41 +55,39 @@ class WebsiteService:
         }}
         
         Make the content engaging, professional, and specific to the business type and location.
+        Return ONLY the JSON, no additional text.
         """
         
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional website content creator. Generate engaging, SEO-friendly content for small businesses."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=1000,
-                temperature=0.7
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=1000,
+                )
             )
             
-            content = response.choices[0].message.content.strip()
+            content = response.text.strip()
             
             # Try to parse JSON
             try:
+                # Remove markdown formatting if present
+                if content.startswith('```json'):
+                    content = content.replace('```json', '').replace('```', '').strip()
+                elif content.startswith('```'):
+                    content = content.replace('```', '').strip()
+                
                 return json.loads(content)
             except json.JSONDecodeError:
                 # Extract content manually if JSON parsing fails
-                return self._parse_openai_content(content, business_type, business_name, area)
+                return self._parse_gemini_content(content, business_type, business_name, area)
                 
         except Exception as e:
-            print(f"OpenAI content generation failed: {e}")
+            print(f"Gemini content generation failed: {e}")
             return self._generate_template_content(business_type, business_name, description, area)
     
-    def _parse_openai_content(self, content, business_type, business_name, area):
-        """Parse OpenAI response if JSON parsing fails"""
-        # Basic parsing logic - you can improve this
+    def _parse_gemini_content(self, content, business_type, business_name, area):
+        """Parse Gemini response if JSON parsing fails"""
         return {
             "hero_title": f"Welcome to {business_name}",
             "hero_subtitle": f"Your trusted {business_type} in {area}",
@@ -169,6 +178,7 @@ class WebsiteService:
         
         return templates.get(business_type, default_template)
     
+    # Keep the existing HTML generation methods
     def generate_website_html(self, website_data, content_data, products=None):
         """Generate complete HTML for child website"""
         theme_colors = self._get_theme_colors(website_data['color_theme'])
@@ -231,22 +241,6 @@ class WebsiteService:
                     {f'<a href="#products" class="text-gray-700 hover:text-gray-900">Products</a>' if products else ''}
                     <a href="#contact" class="text-gray-700 hover:text-gray-900">Contact</a>
                 </div>
-                <button id="mobile-menu-btn" class="md:hidden">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Mobile Menu -->
-        <div id="mobile-menu" class="hidden md:hidden">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-                <a href="#home" class="block px-3 py-2 text-gray-700">Home</a>
-                <a href="#about" class="block px-3 py-2 text-gray-700">About</a>
-                <a href="#services" class="block px-3 py-2 text-gray-700">Services</a>
-                {f'<a href="#products" class="block px-3 py-2 text-gray-700">Products</a>' if products else ''}
-                <a href="#contact" class="block px-3 py-2 text-gray-700">Contact</a>
             </div>
         </div>
     </nav>
@@ -282,8 +276,6 @@ class WebsiteService:
         </div>
     </section>
 
-    {self._generate_products_html(products) if products else ''}
-
     <!-- Contact Section -->
     <section id="contact" class="section-padding bg-white">
         <div class="max-w-6xl mx-auto">
@@ -299,19 +291,15 @@ class WebsiteService:
                     <form id="contact-form" class="space-y-4">
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Name *</label>
-                            <input type="text" name="name" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <input type="text" name="name" required class="w-full p-3 border border-gray-300 rounded-lg">
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Email *</label>
-                            <input type="email" name="email" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Phone</label>
-                            <input type="tel" name="phone" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <input type="email" name="email" required class="w-full p-3 border border-gray-300 rounded-lg">
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Message *</label>
-                            <textarea name="message" required rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                            <textarea name="message" required rows="4" class="w-full p-3 border border-gray-300 rounded-lg"></textarea>
                         </div>
                         <button type="submit" class="btn-primary w-full">Send Message</button>
                     </form>
@@ -320,19 +308,7 @@ class WebsiteService:
                 <!-- Contact Info -->
                 <div>
                     <h3 class="text-2xl font-bold mb-6">Contact Information</h3>
-                    <div class="space-y-4">
-                        {self._generate_contact_info_html(website_data['contact_info'])}
-                    </div>
-                    
-                    <!-- Newsletter Signup -->
-                    <div class="mt-8 p-6 bg-gray-50 rounded-lg">
-                        <h4 class="text-lg font-bold mb-4">Stay Updated</h4>
-                        <p class="text-gray-600 mb-4">Subscribe to receive updates and special offers.</p>
-                        <form id="newsletter-form" class="flex">
-                            <input type="email" name="email" placeholder="Your email" required class="flex-1 p-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500">
-                            <button type="submit" class="btn-primary rounded-l-none">Subscribe</button>
-                        </form>
-                    </div>
+                    {self._generate_contact_info_html(website_data['contact_info'])}
                 </div>
             </div>
         </div>
@@ -346,25 +322,7 @@ class WebsiteService:
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script>
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-btn').addEventListener('click', function() {{
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('hidden');
-        }});
-
-        // Smooth scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {{
-            anchor.addEventListener('click', function (e) {{
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {{
-                    target.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
-                }}
-            }});
-        }});
-
         // Contact form submission
         document.getElementById('contact-form').addEventListener('submit', async function(e) {{
             e.preventDefault();
@@ -374,7 +332,6 @@ class WebsiteService:
                 recipient_id: '{website_data["owner_id"]}',
                 customer_name: formData.get('name'),
                 customer_email: formData.get('email'),
-                customer_phone: formData.get('phone'),
                 content: formData.get('message'),
                 message_type: 'contact_form',
                 website_id: '{website_data.get("_id", "")}'
@@ -390,7 +347,7 @@ class WebsiteService:
                 }});
                 
                 if (response.ok) {{
-                    alert('Message sent successfully! We will get back to you soon.');
+                    alert('Message sent successfully!');
                     this.reset();
                 }} else {{
                     alert('Failed to send message. Please try again.');
@@ -399,51 +356,6 @@ class WebsiteService:
                 alert('Error sending message. Please try again.');
             }}
         }});
-
-        // Newsletter form submission
-        document.getElementById('newsletter-form').addEventListener('submit', async function(e) {{
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = {{
-                business_owner_id: '{website_data["owner_id"]}',
-                name: 'Newsletter Subscriber',
-                email: formData.get('email'),
-                registration_source: 'newsletter',
-                website_id: '{website_data.get("_id", "")}'
-            }};
-            
-            try {{
-                const response = await fetch('/api/customers/register', {{
-                    method: 'POST',
-                    headers: {{
-                        'Content-Type': 'application/json'
-                    }},
-                    body: JSON.stringify(data)
-                }});
-                
-                if (response.ok) {{
-                    alert('Thank you for subscribing!');
-                    this.reset();
-                }} else {{
-                    alert('Subscription failed. Please try again.');
-                }}
-            }} catch (error) {{
-                alert('Error subscribing. Please try again.');
-            }}
-        }});
-
-        // Track page visit
-        fetch(`/api/website/{website_data.get("_id", "")}/visit`, {{
-            method: 'POST',
-            headers: {{
-                'Content-Type': 'application/json'
-            }},
-            body: JSON.stringify({{
-                page: window.location.pathname,
-                referrer: document.referrer
-            }})
-        }}).catch(console.error);
     </script>
 </body>
 </html>
@@ -467,114 +379,24 @@ class WebsiteService:
         services_html = ""
         for service in services:
             services_html += f"""
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                <div class="bg-white p-6 rounded-lg shadow-md">
                     <h3 class="text-xl font-bold mb-3" style="color: var(--primary-color);">{service['name']}</h3>
                     <p class="text-gray-600">{service['description']}</p>
                 </div>
             """
         return services_html
     
-    def _generate_products_html(self, products):
-        """Generate HTML for products section"""
-        if not products:
-            return ""
-            
-        products_html = f"""
-        <!-- Products Section -->
-        <section id="products" class="section-padding bg-white">
-            <div class="max-w-6xl mx-auto">
-                <div class="text-center mb-12">
-                    <h2 class="text-4xl font-bold mb-4" style="color: var(--primary-color);">Our Products</h2>
-                </div>
-                <div class="grid md:grid-cols-3 gap-8">
-        """
-        
-        for product in products[:6]:  # Show max 6 products
-            products_html += f"""
-                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                    <img src="{product.get('image', '/api/placeholder/300/200')}" alt="{product['name']}" class="w-full h-48 object-cover">
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">{product['name']}</h3>
-                        <p class="text-gray-600 mb-4">{product['description'][:100]}...</p>
-                        <div class="flex justify-between items-center">
-                            <span class="text-2xl font-bold" style="color: var(--primary-color);">${product['price']}</span>
-                            <button onclick="inquireProduct('{product['name']}')" class="btn-primary text-sm">Inquire</button>
-                        </div>
-                    </div>
-                </div>
-            """
-        
-        products_html += """
-                </div>
-            </div>
-        </section>
-        
-        <script>
-            function inquireProduct(productName) {
-                const message = `Hi, I'm interested in ${productName}. Please provide more information.`;
-                document.querySelector('textarea[name="message"]').value = message;
-                document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
-            }
-        </script>
-        """
-        
-        return products_html
-    
     def _generate_contact_info_html(self, contact_info):
         """Generate HTML for contact information"""
         contact_html = ""
         
-        if contact_info.get('address'):
-            contact_html += f"""
-                <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 mt-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                    <div>
-                        <p class="font-medium">Address</p>
-                        <p class="text-gray-600">{contact_info['address']}</p>
-                    </div>
-                </div>
-            """
+        if contact_info.get('email'):
+            contact_html += f"<p><strong>Email:</strong> {contact_info['email']}</p>"
         
         if contact_info.get('phone'):
-            contact_html += f"""
-                <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 mt-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
-                    </svg>
-                    <div>
-                        <p class="font-medium">Phone</p>
-                        <p class="text-gray-600">{contact_info['phone']}</p>
-                    </div>
-                </div>
-            """
+            contact_html += f"<p><strong>Phone:</strong> {contact_info['phone']}</p>"
         
-        if contact_info.get('email'):
-            contact_html += f"""
-                <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 mt-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                    </svg>
-                    <div>
-                        <p class="font-medium">Email</p>
-                        <p class="text-gray-600">{contact_info['email']}</p>
-                    </div>
-                </div>
-            """
-        
-        if contact_info.get('hours'):
-            contact_html += f"""
-                <div class="flex items-start space-x-3">
-                    <svg class="w-5 h-5 mt-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <div>
-                        <p class="font-medium">Hours</p>
-                        <p class="text-gray-600">{contact_info['hours']}</p>
-                    </div>
-                </div>
-            """
+        if contact_info.get('address'):
+            contact_html += f"<p><strong>Address:</strong> {contact_info['address']}</p>"
         
         return contact_html
