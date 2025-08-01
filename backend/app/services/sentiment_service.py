@@ -5,7 +5,7 @@ from textblob import TextBlob
 import json
 
 class SentimentService:
-    def _init_(self):
+    def __init__(self):
         openai.api_key = current_app.config.get('OPENAI_API_KEY')
         self.use_openai = bool(openai.api_key)
     

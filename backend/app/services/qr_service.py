@@ -167,4 +167,4 @@ class QRService:
         # Paste inner canvas onto main canvas
         canvas.paste(inner_canvas, (frame_width, frame_width))
         
-        return canvas
+        return canvas
