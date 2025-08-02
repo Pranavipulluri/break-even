@@ -17,6 +17,10 @@ redis==4.6.0
 python-dotenv==1.0.0
 python-decouple==3.8
 
+# Image Processing & AI
+Pillow==10.0.0
+requests==2.31.0
+
 # Authentication & Security
 bcrypt==4.0.1
 PyJWT==2.8.0

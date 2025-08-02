@@ -62,6 +62,71 @@ const AITools = () => {
     }
   };
 
+  const generateImage = async (prompt, imageType = 'poster', style = 'modern') => {
+    try {
+      setLoading(true);
+      const response = await api.post('/ai-tools/dev/generate-image', {
+        prompt,
+        image_type: imageType,
+        style
+      });
+      
+      if (response.data.success) {
+        setGeneratedImage(response.data.image_data);
+        setGeneratedContent(response.data.concept || ''); // Store the AI concept
+        toast.success('Image concept generated successfully!');
+      } else {
+        toast.error(response.data.error || 'Failed to generate image');
+      }
+    } catch (error) {
+      toast.error('Failed to generate image');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBusinessSuggestions = async (suggestionType = 'general') => {
+    try {
+      setLoading(true);
+      const response = await api.post('/ai-tools/business-suggestions', {
+        type: suggestionType
+      });
+      
+      setSuggestions(response.data.suggestions.suggestions);
+      toast.success('Suggestions generated!');
+    } catch (error) {
+      toast.error('Failed to get suggestions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendChatMessage = async (message) => {
+    try {
+      const response = await api.post('/ai-tools/chatbot', {
+        message,
+        conversation_id: conversationId
+      });
+      
+      const newMessages = [
+        ...chatMessages,
+        { type: 'user', content: message, timestamp: new Date() },
+        { type: 'bot', content: response.data.response, timestamp: new Date() }
+      ];
+      
+      setChatMessages(newMessages);
+      setConversationId(response.data.conversation_id);
+      setChatInput('');
+    } catch (error) {
+      toast.error('Failed to send message');
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
+
   const ContentGenerator = () => {
     const [contentType, setContentType] = useState('product_description');
     const [prompt, setPrompt] = useState('');
@@ -204,94 +269,71 @@ const AITools = () => {
     ];
 
     return (
-      <div className="space-y-8">
-        {/* Image Type & Style Selection */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="card">
-            <h3 className="heading-3 text-gray-900 mb-6">Image Type</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {imageTypes.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setImageType(type.value)}
-                  className={`p-4 rounded-xl border-2 transition-all text-center hover:scale-105 ${
-                    imageType === type.value
-                      ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-lg'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-xl mb-2">{type.icon}</div>
-                  <div className="font-medium text-xs">{type.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="heading-3 text-gray-900 mb-6">Style</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {styles.map((styleOption) => (
-                <button
-                  key={styleOption.value}
-                  onClick={() => setStyle(styleOption.value)}
-                  className={`p-4 rounded-xl border-2 transition-all text-center hover:scale-105 ${
-                    style === styleOption.value
-                      ? 'border-pink-500 bg-pink-50 text-pink-700 shadow-lg'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-xl mb-2">{styleOption.preview}</div>
-                  <div className="font-medium text-xs">{styleOption.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Prompt Input */}
+      <div className="space-y-6">
         <div className="card">
-          <h3 className="heading-3 text-gray-900 mb-6 flex items-center space-x-2">
-            <Palette className="text-purple-600" />
-            <span>Describe Your Image</span>
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Images</h3>
           
-          <div className="space-y-6">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows="4"
-              className="input-field resize-none"
-              placeholder="Describe the image you want to create in detail..."
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Image Type
+              </label>
+              <select
+                value={imageType}
+                onChange={(e) => setImageType(e.target.value)}
+                className="input-field"
+              >
+                <option value="poster">Business Poster</option>
+                <option value="product">Product Image</option>
+                <option value="banner">Marketing Banner</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Style
+              </label>
+              <select
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                className="input-field"
+              >
+                <option value="professional">Professional</option>
+                <option value="modern">Modern</option>
+                <option value="creative">Creative</option>
+                <option value="minimal">Minimal</option>
+                <option value="vintage">Vintage</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows="3"
+                className="input-field"
+                placeholder="Describe the image you want to generate..."
+              />
+            </div>
 
             <button
-              onClick={() => {
-                // generateImage(prompt, imageType, style);
-                toast.success('Image generation feature coming soon!');
-              }}
+              onClick={() => generateImage(prompt, imageType, style)}
               disabled={!prompt || loading}
-              className="btn-primary w-full btn-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+              className="btn-primary w-full"
             >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Generating...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center space-x-2">
-                  <ImageIcon size={18} />
-                  <span>Generate Image</span>
-                </div>
-              )}
+              {loading ? 'Generating...' : 'Generate Image'}
             </button>
           </div>
         </div>
 
         {/* Image Preview */}
         {generatedImage && (
-          <div className="card border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="heading-3 text-purple-900">Generated Image</h3>
+          <div className="card">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Generated Image Concept</h3>
               <a
                 href={generatedImage}
                 download="generated-image.png"
@@ -301,12 +343,34 @@ const AITools = () => {
                 <span>Download</span>
               </a>
             </div>
-            <div className="text-center">
-              <img
-                src={generatedImage}
-                alt="Generated"
-                className="max-w-full h-auto rounded-xl shadow-large mx-auto"
-              />
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-md font-medium text-gray-800 mb-2">Visual Mockup</h4>
+                <img
+                  src={generatedImage}
+                  alt="Generated"
+                  className="max-w-full h-auto rounded-lg shadow-md"
+                />
+              </div>
+              
+              {generatedContent && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-800 mb-2">AI Design Concept</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-700 text-sm leading-relaxed">{generatedContent}</p>
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(generatedContent)}
+                      className="btn-secondary flex items-center space-x-2 text-sm"
+                    >
+                      <Copy size={14} />
+                      <span>Copy Concept</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -379,4 +443,4 @@ const AITools = () => {
   );
 };
 
-export default AITools;
+export default AITools;

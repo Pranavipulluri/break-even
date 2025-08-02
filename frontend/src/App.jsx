@@ -14,6 +14,7 @@ import QRCode from './pages/QRCode';
 import AITools from './pages/AITools';
 import Settings from './pages/Settings';
 import WebsiteBuilder from './pages/WebsiteBuilder';
+import WebsiteAnalytics from './pages/WebsiteAnalytics';
 import AITestPage from './pages/AITestPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
@@ -34,6 +35,7 @@ function App() {
                 <Route path="products" element={<Products />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="analytics" element={<Analytics />} />
+                <Route path="website-analytics" element={<WebsiteAnalytics />} />
                 <Route path="qr-code" element={<QRCode />} />
                 <Route path="ai-tools" element={<AITools />} />
                 <Route path="settings" element={<Settings />} />

@@ -7,6 +7,8 @@ from app.services.ai_service import AIService
 from app.services.gemini_service import get_gemini_service
 from app.services.github_service import get_github_service
 from app.services.netlify_service import get_netlify_service
+from app.services.groq_service import GroqService
+from app.services.stability_service import StabilityService
 from bson import ObjectId
 from datetime import datetime
 import base64
@@ -37,6 +39,34 @@ def dev_gemini_test():
     except Exception as e:
         return jsonify({'error': str(e), 'success': False}), 500
 
+@ai_bp.route('/ai-tools/dev/groq-test', methods=['POST'])
+def dev_groq_test():
+    """Test Groq AI without authentication"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', 'Generate a business poster concept for a bakery')
+        
+        groq_service = GroqService()
+        result = groq_service.test_connection()
+        
+        if result.get('success'):
+            # Test image generation
+            image_result = groq_service.generate_business_poster_concept(
+                business_name="Test Bakery",
+                business_type="bakery",
+                message=prompt,
+                style="professional"
+            )
+            return jsonify({
+                'connection': result,
+                'image_generation': image_result
+            }), 200
+        else:
+            return jsonify(result), 500
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
 @ai_bp.route('/ai-tools/dev/netlify-deploy', methods=['POST'])
 def dev_netlify_deploy():
     """Test Netlify deployment without authentication"""
@@ -51,6 +81,26 @@ def dev_netlify_deploy():
         })
         
         result = get_netlify_service().create_and_deploy_website(site_name, business_info)
+        
+        # Save successful deployment to database for QR code to find
+        if result.get('success') and result.get('website_url'):
+            try:
+                from app import mongo
+                deployed_site = {
+                    'website_name': site_name,
+                    'site_name': site_name,
+                    'website_url': result['website_url'],
+                    'platform': 'netlify',
+                    'deployment_info': result,
+                    'business_info': business_info,
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True
+                }
+                mongo.db.deployed_sites.insert_one(deployed_site)
+                print(f"Saved deployed site: {site_name} -> {result['website_url']}")
+            except Exception as e:
+                print(f"Could not save deployment to database: {e}")
+        
         return jsonify(result), 200
         
     except Exception as e:
@@ -70,6 +120,72 @@ def dev_github_deploy():
         })
         
         result = get_github_service().create_website_repository(site_name, business_info)
+        
+        # Save successful deployment to database for QR code to find
+        if result.get('success') and result.get('website_url'):
+            try:
+                from app import mongo
+                deployed_site = {
+                    'website_name': site_name,
+                    'site_name': site_name,
+                    'website_url': result['website_url'],
+                    'platform': 'github',
+                    'deployment_info': result,
+                    'business_info': business_info,
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True
+                }
+                mongo.db.deployed_sites.insert_one(deployed_site)
+                print(f"Saved deployed site: {site_name} -> {result['website_url']}")
+            except Exception as e:
+                print(f"Could not save deployment to database: {e}")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@ai_bp.route('/ai-tools/dev/create-data-website', methods=['POST'])
+def dev_create_data_website():
+    """Create a data collection website without authentication"""
+    try:
+        data = request.get_json()
+        title = data.get('title', 'Data Collection Website')
+        description = data.get('description', 'Join our community and share your feedback!')
+        content = data.get('content', 'Welcome to our platform. We value your input and feedback.')
+        business_id = data.get('business_id')
+        
+        # Create the website with data collection functionality
+        netlify_service = get_netlify_service()
+        result = netlify_service.create_data_collection_website(
+            title=title,
+            description=description,
+            content=content,
+            business_id=business_id
+        )
+        
+        # Store deployment info in database
+        if result.get('success') and result.get('website_url'):
+            try:
+                deployed_site = {
+                    'title': title,
+                    'description': description,
+                    'content': content,
+                    'website_url': result['website_url'],
+                    'netlify_url': result.get('netlify_url'),
+                    'platform': 'netlify',
+                    'deployment_info': result,
+                    'business_id': business_id,
+                    'has_data_collection': True,
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True,
+                    'features': ['user_registration', 'feedback_collection', 'sentiment_analysis']
+                }
+                mongo.db.deployed_sites.insert_one(deployed_site)
+                print(f"Saved data collection website: {title} -> {result['website_url']}")
+            except Exception as e:
+                print(f"Could not save deployment to database: {e}")
+        
         return jsonify(result), 200
         
     except Exception as e:
@@ -300,6 +416,80 @@ def generate_content():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@ai_bp.route('/ai-tools/dev/generate-image', methods=['POST'])
+def dev_generate_image():
+    """Development image generation without authentication using Stability AI"""
+    try:
+        data = request.get_json()
+        
+        prompt = data.get('prompt')
+        image_type = data.get('image_type', 'poster')  # 'poster', 'product', 'banner'
+        style = data.get('style', 'professional')
+        
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        print(f"🎨 Generating {image_type} image with Stability AI: {prompt}")
+        
+        # Initialize Stability AI service
+        stability_service = StabilityService()
+        
+        # Test connection first
+        connection_test = stability_service.test_connection()
+        if not connection_test.get('success'):
+            return jsonify({
+                'success': False,
+                'error': f'Stability AI connection failed: {connection_test.get("error")}'
+            }), 500
+        
+        print("✅ Stability AI connection successful")
+        
+        # Generate image based on type
+        if image_type == 'poster':
+            result = stability_service.generate_business_poster(
+                business_name="Your Business",
+                business_type="business",
+                message=prompt,
+                style=style
+            )
+        elif image_type == 'product':
+            result = stability_service.generate_product_image(
+                product_name=prompt,
+                product_description="",
+                style=style
+            )
+        elif image_type == 'banner':
+            result = stability_service.generate_marketing_banner(
+                business_name="Your Business",
+                message=prompt,
+                style=style
+            )
+        else:
+            result = stability_service.generate_image(prompt, style, image_type)
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'image_data': result.get('image_data'),
+                'concept': result.get('enhanced_prompt', ''),
+                'prompt': prompt,
+                'image_type': image_type,
+                'style': style,
+                'dimensions': result.get('dimensions', '')
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Image generation failed')
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ Dev image generation error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Image generation failed: {str(e)}'
+        }), 500
+
 @ai_bp.route('/ai-tools/generate-image', methods=['POST'])
 @jwt_required()
 def generate_image():
@@ -308,47 +498,78 @@ def generate_image():
         data = request.get_json()
         
         prompt = data.get('prompt')
-        image_type = data.get('image_type', 'poster')  # 'poster', 'logo', 'product_image'
-        style = data.get('style', 'modern')
+        image_type = data.get('image_type', 'poster')  # 'poster', 'product', 'banner'
+        style = data.get('style', 'professional')
         
         if not prompt:
             return jsonify({'error': 'Prompt is required'}), 400
         
-        ai_service = AIService()
-        
-        # Enhance prompt based on business context
+        # Get user business context
         user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
-        business_context = ""
-        if user:
-            business_context = f"for {user.get('business_name', '')} business"
+        business_name = user.get('business_name', '') if user else ''
+        business_type = user.get('business_type', '') if user else ''
         
-        enhanced_prompt = f"{prompt} {business_context}, {style} style, high quality, professional"
+        # Initialize Stability AI service
+        stability_service = StabilityService()
         
-        # Generate image
-        image_data = ai_service.generate_image(enhanced_prompt, image_type)
+        # Generate image based on type
+        if image_type == 'poster':
+            result = stability_service.generate_business_poster(
+                business_name=business_name or "Your Business",
+                business_type=business_type or "business",
+                message=prompt,
+                style=style
+            )
+        elif image_type == 'product':
+            result = stability_service.generate_product_image(
+                product_name=prompt,
+                product_description="",
+                style=style
+            )
+        elif image_type == 'banner':
+            result = stability_service.generate_marketing_banner(
+                business_name=business_name or "Your Business",
+                message=prompt,
+                style=style
+            )
+        else:
+            result = stability_service.generate_image(prompt, style, image_type)
         
-        if image_data:
+        if result.get('success'):
             # Save generation record
             mongo.db.ai_image_generations.insert_one({
                 'user_id': ObjectId(current_user_id),
                 'prompt': prompt,
-                'enhanced_prompt': enhanced_prompt,
                 'image_type': image_type,
                 'style': style,
-                'image_data': image_data,
+                'concept': result.get('enhanced_prompt', ''),
+                'image_data': result.get('image_data'),
+                'business_context': {
+                    'business_name': business_name,
+                    'business_type': business_type
+                },
                 'created_at': datetime.utcnow()
             })
             
             return jsonify({
-                'image_data': image_data,
+                'success': True,
+                'image_data': result.get('image_data'),
+                'concept': result.get('enhanced_prompt', ''),
                 'prompt': prompt,
-                'type': image_type
-            }), 200
+                'image_type': image_type,
+                'style': style
+            })
         else:
-            return jsonify({'error': 'Failed to generate image'}), 500
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Image generation failed')
+            }), 500
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': f'Image generation failed: {str(e)}'
+        }), 500
 
 @ai_bp.route('/ai-tools/business-suggestions', methods=['POST'])
 @jwt_required()

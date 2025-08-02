@@ -27,6 +27,12 @@ class Config:
     # Netlify API
     NETLIFY_API_KEY = os.environ.get('NETLIFY_API_KEY') or 'nfp_tHbhsuDnH1k8SLeyb7VeqtGxDaoHqyxBadfc'
     
+    # Groq API (for image generation)
+    GROQ_API_KEY = os.environ.get('GROQ_API_KEY') or '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'
+    
+    # Stability AI API (for image generation)
+    STABILITY_API_KEY = os.environ.get('STABILITY_API_KEY') or 'sk-Ci8STOuJz4ZE1xGzmQXFDoykscMoNFoD4OCQZr5BlWgd83O2'
+    
     # Website builder settings
     WEBSITE_BASE_URL = os.environ.get('WEBSITE_BASE_URL') or 'http://localhost:3001'
     FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:3001'

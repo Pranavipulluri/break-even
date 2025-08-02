@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .forms-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .form-card h3 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .rating-stars {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        
+        .rating-stars button {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #ddd;
+            transition: color 0.3s ease;
+        }
+        
+        .rating-stars button:hover,
+        .rating-stars button.active {
+            color: #ffd700;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{title}}</h1>
+            <p>{{description}}</p>
+        </div>
+        
+        <div class="content">
+            <div class="features">
+                <div class="feature">
+                    <h3>🚀 Get Started</h3>
+                    <p>Join our community and unlock amazing features designed just for you.</p>
+                </div>
+                <div class="feature">
+                    <h3>💡 Innovative Solutions</h3>
+                    <p>Discover cutting-edge tools that will transform your experience.</p>
+                </div>
+                <div class="feature">
+                    <h3>🎯 Personalized Experience</h3>
+                    <p>Tailored content and features based on your unique needs and preferences.</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin: 2rem 0;">
+                <h2>{{content}}</h2>
+                <p>Join thousands of satisfied users who have already discovered the benefits of our platform.</p>
+            </div>
+        </div>
+        
+        <div class="forms-section">
+            <!-- Registration Form -->
+            <div class="form-card">
+                <h3>🎉 Join Our Community</h3>
+                <form id="registration-form">
+                    <div class="form-group">
+                        <label for="reg-name">Full Name</label>
+                        <input type="text" id="reg-name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg-email">Email Address *</label>
+                        <input type="email" id="reg-email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reg-phone">Phone Number (Optional)</label>
+                        <input type="tel" id="reg-phone" name="phone">
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="newsletter" name="newsletter" checked>
+                        <label for="newsletter">Subscribe to our newsletter for updates and special offers</label>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="reg-btn">
+                        Join Now
+                    </button>
+                    
+                    <div id="reg-message"></div>
+                </form>
+            </div>
+            
+            <!-- Feedback Form -->
+            <div class="form-card">
+                <h3>💬 Share Your Feedback</h3>
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-name">Name (Optional)</label>
+                        <input type="text" id="feedback-name" name="name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="feedback-email">Email (Optional)</label>
+                        <input type="email" id="feedback-email" name="email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Rate Your Experience</label>
+                        <div class="rating-stars" id="rating-stars">
+                            <button type="button" data-rating="1">★</button>
+                            <button type="button" data-rating="2">★</button>
+                            <button type="button" data-rating="3">★</button>
+                            <button type="button" data-rating="4">★</button>
+                            <button type="button" data-rating="5">★</button>
+                        </div>
+                        <input type="hidden" id="rating" name="rating" value="">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="feedback-text">Your Feedback *</label>
+                        <textarea id="feedback-text" name="feedback" required placeholder="Tell us about your experience..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="feedback-type">Feedback Type</label>
+                        <select id="feedback-type" name="feedback_type">
+                            <option value="general">General Feedback</option>
+                            <option value="suggestion">Suggestion</option>
+                            <option value="complaint">Complaint</option>
+                            <option value="compliment">Compliment</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn" id="feedback-btn">
+                        Submit Feedback
+                    </button>
+                    
+                    <div id="feedback-message"></div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2024 Your Business. All rights reserved. | Powered by Break-Even Platform</p>
+        </div>
+    </div>
+    
+    <script>
+        // Get website source from URL or use default
+        const websiteSource = window.location.hostname || 'mini-website';
+        const businessId = new URLSearchParams(window.location.search).get('business_id') || null;
+        
+        // Netlify Functions base URL (replace with your actual Netlify site URL)
+        const FUNCTIONS_BASE_URL = 'https://your-site-name.netlify.app/.netlify/functions';
+        
+        // Registration Form Handler
+        document.getElementById('registration-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const regButton = document.getElementById('reg-btn');
+            const regMessage = document.getElementById('reg-message');
+            
+            regButton.disabled = true;
+            regButton.textContent = 'Registering...';
+            
+            try {
+                const response = await fetch(`${FUNCTIONS_BASE_URL}/register-user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        email: formData.get('email'),
+                        phone: formData.get('phone'),
+                        website_source: websiteSource,
+                        business_id: businessId,
+                        newsletter_signup: formData.get('newsletter') === 'on'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    regMessage.innerHTML = '<div class="alert alert-success">✅ ' + result.message + '</div>';
+                    e.target.reset();
+                } else {
+                    regMessage.innerHTML = '<div class="alert alert-error">❌ ' + result.error + '</div>';
+                }
+            } catch (error) {
+                regMessage.innerHTML = '<div class="alert alert-error">❌ Registration failed. Please try again.</div>';
+            } finally {
+                regButton.disabled = false;
+                regButton.textContent = 'Join Now';
+            }
+        });
+        
+        // Feedback Form Handler
+        document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const feedbackButton = document.getElementById('feedback-btn');
+            const feedbackMessage = document.getElementById('feedback-message');
+            
+            feedbackButton.disabled = true;
+            feedbackButton.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch(`${FUNCTIONS_BASE_URL}/submit-feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        email: formData.get('email'),
+                        feedback: formData.get('feedback'),
+                        rating: parseInt(formData.get('rating')) || null,
+                        feedback_type: formData.get('feedback_type'),
+                        website_source: websiteSource,
+                        business_id: businessId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    feedbackMessage.innerHTML = '<div class="alert alert-success">✅ Thank you for your feedback!</div>';
+                    e.target.reset();
+                    // Reset rating stars
+                    document.querySelectorAll('#rating-stars button').forEach(btn => btn.classList.remove('active'));
+                } else {
+                    feedbackMessage.innerHTML = '<div class="alert alert-error">❌ ' + result.error + '</div>';
+                }
+            } catch (error) {
+                feedbackMessage.innerHTML = '<div class="alert alert-error">❌ Submission failed. Please try again.</div>';
+            } finally {
+                feedbackButton.disabled = false;
+                feedbackButton.textContent = 'Submit Feedback';
+            }
+        });
+        
+        // Rating Stars Handler
+        document.querySelectorAll('#rating-stars button').forEach(button => {
+            button.addEventListener('click', () => {
+                const rating = parseInt(button.dataset.rating);
+                document.getElementById('rating').value = rating;
+                
+                // Update star display
+                document.querySelectorAll('#rating-stars button').forEach((btn, index) => {
+                    if (index < rating) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            });
+        });
+        
+        // Auto-populate forms if user data is available in localStorage
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            try {
+                const user = JSON.parse(userData);
+                if (user.name) {
+                    document.getElementById('reg-name').value = user.name;
+                    document.getElementById('feedback-name').value = user.name;
+                }
+                if (user.email) {
+                    document.getElementById('reg-email').value = user.email;
+                    document.getElementById('feedback-email').value = user.email;
+                }
+            } catch (e) {
+                console.log('No stored user data found');
+            }
+        }
+    </script>
+</body>
+</html>
