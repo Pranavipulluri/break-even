@@ -8,6 +8,8 @@ from app.services.gemini_service import get_gemini_service
 from app.services.github_service import get_github_service
 from app.services.netlify_service import get_netlify_service
 from app.services.groq_service import GroqService
+from app.services.stability_service import StabilityService
+from app.services.mock_image_service import MockImageService
 from app.services.email_service import get_email_service
 from bson import ObjectId
 from datetime import datetime
@@ -88,6 +90,39 @@ def dev_gemini_test():
         
         result = get_gemini_service().generate_content(prompt)
         return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@ai_bp.route('/ai-tools/dev/chatbot-test', methods=['POST'])
+def dev_chatbot_test():
+    """Test chatbot with Gemini AI without authentication"""
+    try:
+        data = request.get_json()
+        message = data.get('message', 'Hello! How can you help my business?')
+        
+        # Use Gemini service for chatbot response
+        gemini_service = get_gemini_service()
+        
+        context_prompt = f"""You are a helpful AI business assistant. You help business owners with their questions about starting, running, and growing their businesses.
+        
+        User question: {message}
+        
+        Please provide a helpful, professional response:"""
+        
+        result = gemini_service.generate_content(context_prompt)
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'response': result['content'],
+                'message': 'Chatbot test successful'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Failed to generate response')
+            }), 500
         
     except Exception as e:
         return jsonify({'error': str(e), 'success': False}), 500
@@ -246,7 +281,7 @@ def dev_create_data_website():
 
 @ai_bp.route('/ai-tools/dev/generate-image', methods=['POST'])
 def dev_generate_image():
-    """Development image generation with fallback to mock"""
+    """Development image generation using mock service for specific prompts"""
     try:
         data = request.get_json()
         
@@ -266,86 +301,42 @@ def dev_generate_image():
                 'error': 'Prompt is required'
             }), 400
         
-        logger.info(f"🎨 Generating {image_type} image: {prompt}")
+        logger.info(f"🎨 Generating {image_type} image with Mock Service: {prompt}")
         
-        # Try to use real Stability AI service first
-        try:
-            # Check if StabilityService is available and configured
-            try:
-                from app.services.stability_service import StabilityService
-                stability_service = StabilityService()
-                
-                # Test connection
-                connection_test = stability_service.test_connection()
-                if connection_test.get('success'):
-                    logger.info("✅ Stability AI connection successful")
-                    
-                    # Generate image based on type
-                    if image_type == 'poster':
-                        result = stability_service.generate_business_poster(
-                            business_name="Your Business",
-                            business_type="business",
-                            message=prompt,
-                            style=style
-                        )
-                    elif image_type == 'product':
-                        result = stability_service.generate_product_image(
-                            product_name=prompt,
-                            product_description="",
-                            style=style
-                        )
-                    elif image_type == 'banner':
-                        result = stability_service.generate_marketing_banner(
-                            business_name="Your Business",
-                            message=prompt,
-                            style=style
-                        )
-                    else:
-                        result = stability_service.generate_image(prompt, style, image_type)
-                    
-                    if result.get('success'):
-                        return jsonify({
-                            'success': True,
-                            'image_data': result.get('image_data'),
-                            'concept': result.get('enhanced_prompt', prompt),
-                            'prompt': prompt,
-                            'image_type': image_type,
-                            'style': style,
-                            'source': 'stability_ai'
-                        })
-                    else:
-                        logger.warning(f"Stability AI generation failed: {result.get('error')}")
-                        raise Exception(result.get('error', 'Generation failed'))
-                else:
-                    logger.warning(f"Stability AI connection failed: {connection_test.get('error')}")
-                    raise Exception("Connection test failed")
-                    
-            except ImportError as e:
-                logger.warning(f"StabilityService not available: {e}")
-                raise Exception("StabilityService not configured")
-            except Exception as e:
-                logger.warning(f"Stability AI service error: {e}")
-                raise Exception(str(e))
-                
-        except Exception as stability_error:
-            logger.info(f"⚠️  Falling back to mock image generation due to: {stability_error}")
-            
-            # Fallback to mock image generation
-            mock_image_data = generate_mock_image(prompt, image_type, style)
-            
-            # Generate a mock concept description
-            concept = f"Mock {image_type} in {style} style featuring {prompt}. This is a placeholder image generated for development purposes."
-            
+        # Use Mock Image Service for specific predefined images
+        mock_service = MockImageService()
+        
+        # Test connection
+        connection_test = mock_service.test_connection()
+        if not connection_test.get('success'):
+            return jsonify({
+                'success': False,
+                'error': f'Mock service connection failed: {connection_test.get("error")}'
+            }), 500
+        
+        logger.info("✅ Mock Image Service connection successful")
+        
+        # Generate image using mock service
+        result = mock_service.generate_image(prompt, image_type, style)
+        
+        if result.get('success'):
+            logger.info("✅ Mock image generation successful")
             return jsonify({
                 'success': True,
-                'image_data': mock_image_data,
-                'concept': concept,
+                'image_data': result.get('image_data'),
+                'concept': result.get('concept'),
                 'prompt': prompt,
                 'image_type': image_type,
                 'style': style,
-                'source': 'mock_generator',
-                'note': 'This is a mock image. Configure Stability AI API for real image generation.'
+                'dimensions': result.get('dimensions', '800x800'),
+                'source': 'mock_service'
             })
+        else:
+            logger.error(f"Mock image generation failed: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Mock image generation failed')
+            }), 500
             
     except Exception as e:
         logger.error(f"❌ Dev image generation error: {e}")
@@ -1011,7 +1002,7 @@ def mock_email_send():
 @ai_bp.route('/ai-tools/generate-image', methods=['POST'])
 @jwt_required()
 def generate_image():
-    """Production image generation with authentication"""
+    """Production image generation with authentication using mock service"""
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
@@ -1031,77 +1022,52 @@ def generate_image():
         business_name = user.get('business_name', 'Your Business') if user else 'Your Business'
         business_type = user.get('business_type', 'business') if user else 'business'
         
-        logger.info(f"🎨 Generating {image_type} for user {current_user_id}: {prompt}")
+        logger.info(f"🎨 Generating {image_type} with Mock Service for user {current_user_id}: {prompt}")
         
-        # Try Stability AI first, fallback to mock
-        try:
-            from app.services.stability_service import StabilityService
-            stability_service = StabilityService()
-            
-            # Generate image based on type
-            if image_type == 'poster':
-                result = stability_service.generate_business_poster(
-                    business_name=business_name,
-                    business_type=business_type,
-                    message=prompt,
-                    style=style
-                )
-            elif image_type == 'product':
-                result = stability_service.generate_product_image(
-                    product_name=prompt,
-                    product_description="",
-                    style=style
-                )
-            elif image_type == 'banner':
-                result = stability_service.generate_marketing_banner(
-                    business_name=business_name,
-                    message=prompt,
-                    style=style
-                )
-            else:
-                result = stability_service.generate_image(prompt, style, image_type)
-            
-            if not result.get('success'):
-                raise Exception(result.get('error', 'Generation failed'))
-                
+        # Use Mock Image Service for specific predefined images
+        mock_service = MockImageService()
+        
+        # Generate image using mock service
+        result = mock_service.generate_image(prompt, image_type, style)
+        
+        if result.get('success'):
             image_data = result.get('image_data')
-            concept = result.get('enhanced_prompt', prompt)
-            source = 'stability_ai'
+            concept = result.get('concept')
+            source = 'mock_service'
             
-        except Exception as e:
-            logger.warning(f"Stability AI failed, using mock: {e}")
-            image_data = generate_mock_image(prompt, image_type, style)
-            concept = f"Mock {image_type} in {style} style for {business_name}. Real generation service unavailable."
-            source = 'mock_generator'
-        
-        # Save generation record
-        try:
-            mongo.db.ai_image_generations.insert_one({
-                'user_id': ObjectId(current_user_id),
+            # Save generation record
+            try:
+                mongo.db.ai_image_generations.insert_one({
+                    'user_id': ObjectId(current_user_id),
+                    'prompt': prompt,
+                    'image_type': image_type,
+                    'style': style,
+                    'concept': concept,
+                    'image_data': image_data,
+                    'source': source,
+                    'business_context': {
+                        'business_name': business_name,
+                        'business_type': business_type
+                    },
+                    'created_at': datetime.utcnow()
+                })
+            except Exception as db_error:
+                logger.warning(f"Failed to save to database: {db_error}")
+            
+            return jsonify({
+                'success': True,
+                'image_data': image_data,
+                'concept': concept,
                 'prompt': prompt,
                 'image_type': image_type,
                 'style': style,
-                'concept': concept,
-                'image_data': image_data,
-                'source': source,
-                'business_context': {
-                    'business_name': business_name,
-                    'business_type': business_type
-                },
-                'created_at': datetime.utcnow()
+                'source': source
             })
-        except Exception as db_error:
-            logger.warning(f"Failed to save to database: {db_error}")
-        
-        return jsonify({
-            'success': True,
-            'image_data': image_data,
-            'concept': concept,
-            'prompt': prompt,
-            'image_type': image_type,
-            'style': style,
-            'source': source
-        })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Mock image generation failed')
+            }), 500
         
     except Exception as e:
         logger.error(f"❌ Production image generation error: {e}")
@@ -1312,15 +1278,39 @@ def chatbot():
             if chat_history:
                 conversation_history = chat_history.get('messages', [])
         
-        ai_service = AIService()
-        response = ai_service.chatbot_response(
-            message, 
-            user_context={
-                'business_name': user.get('business_name', '') if user else '',
-                'business_type': website.get('business_type', '') if website else ''
-            },
-            conversation_history=conversation_history
-        )
+        # Use Gemini service for chatbot response
+        gemini_service = get_gemini_service()
+        
+        # Prepare context for Gemini
+        business_context = ""
+        if user:
+            business_context += f"Business: {user.get('business_name', 'N/A')}. "
+        if website:
+            business_context += f"Business Type: {website.get('business_type', 'N/A')}. "
+        
+        # Build conversation context
+        context_prompt = f"""You are a helpful AI business assistant. You're helping a business owner with their questions.
+        
+        Business Context: {business_context}
+        
+        Previous conversation:"""
+        
+        # Add recent conversation history (last 5 messages)
+        recent_history = conversation_history[-5:] if conversation_history else []
+        for msg in recent_history:
+            context_prompt += f"\nUser: {msg.get('user_message', '')}"
+            context_prompt += f"\nAssistant: {msg.get('bot_response', '')}"
+        
+        context_prompt += f"\n\nCurrent question: {message}"
+        context_prompt += "\n\nPlease provide a helpful, professional response as a business assistant:"
+        
+        # Get response from Gemini
+        gemini_result = gemini_service.generate_content(context_prompt)
+        
+        if gemini_result.get('success'):
+            response = gemini_result['content']
+        else:
+            response = "I'm sorry, I'm having trouble processing your request right now. Please try again."
         
         # Save conversation
         new_message = {
@@ -1351,7 +1341,8 @@ def chatbot():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Chatbot error: {e}")
+        return jsonify({'error': 'Failed to process your message. Please try again.'}), 500
 
 # ===== New Email Service Endpoints =====
 

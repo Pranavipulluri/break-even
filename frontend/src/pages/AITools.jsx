@@ -188,17 +188,20 @@ const AITools = () => {
         conversation_id: conversationId
       });
       
-      const newMessages = [
-        ...chatMessages,
-        { type: 'user', content: message, timestamp: new Date() },
-        { type: 'bot', content: response.data.response, timestamp: new Date() }
-      ];
-      
-      setChatMessages(newMessages);
+      // Add bot response to chat
+      const botMessage = { 
+        type: 'bot', 
+        content: response.data.response, 
+        timestamp: new Date() 
+      };
+      setChatMessages(prev => [...prev, botMessage]);
       setConversationId(response.data.conversation_id);
-      setChatInput('');
+      
+      return response.data;
     } catch (error) {
+      console.error('Chat error:', error);
       toast.error('Failed to send message');
+      throw error;
     }
   };
 
@@ -541,6 +544,161 @@ const AITools = () => {
     );
   };
 
+  const AIAssistant = () => {
+    const [chatLoading, setChatLoading] = useState(false);
+
+    const handleSendMessage = async (e) => {
+      e.preventDefault();
+      if (!chatInput.trim() || chatLoading) return;
+
+      const message = chatInput.trim();
+      setChatInput('');
+      setChatLoading(true);
+
+      // Add user message immediately
+      const userMessage = { type: 'user', content: message, timestamp: new Date() };
+      setChatMessages(prev => [...prev, userMessage]);
+
+      try {
+        const response = await sendChatMessage(message);
+        // sendChatMessage already updates the chat messages
+      } catch (error) {
+        // Add error message if needed
+        const errorMessage = { 
+          type: 'bot', 
+          content: 'Sorry, I encountered an error. Please try again.', 
+          timestamp: new Date() 
+        };
+        setChatMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setChatLoading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="heading-3 text-gray-900 flex items-center space-x-2">
+              <MessageSquare className="text-orange-500" size={20} />
+              <span>AI Business Assistant</span>
+            </h3>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Powered by Gemini AI</span>
+            </div>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="bg-gray-50 rounded-xl p-4 h-96 overflow-y-auto mb-4 space-y-4">
+            {chatMessages.length === 0 ? (
+              <div className="text-center text-gray-500 mt-20">
+                <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
+                <h4 className="font-medium mb-2">Start a conversation!</h4>
+                <p className="text-sm">Ask me anything about your business - marketing, operations, growth strategies, and more.</p>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <button
+                    onClick={() => setChatInput("How can I improve my business marketing?")}
+                    className="px-3 py-1 bg-white text-gray-600 rounded-full text-xs hover:bg-gray-100 transition-colors"
+                  >
+                    Marketing tips
+                  </button>
+                  <button
+                    onClick={() => setChatInput("What are some cost-effective business strategies?")}
+                    className="px-3 py-1 bg-white text-gray-600 rounded-full text-xs hover:bg-gray-100 transition-colors"
+                  >
+                    Cost strategies
+                  </button>
+                  <button
+                    onClick={() => setChatInput("How can I increase customer retention?")}
+                    className="px-3 py-1 bg-white text-gray-600 rounded-full text-xs hover:bg-gray-100 transition-colors"
+                  >
+                    Customer retention
+                  </button>
+                </div>
+              </div>
+            ) : (
+              chatMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      message.type === 'user'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-white text-gray-800 shadow-sm border'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className={`text-xs mt-1 ${
+                      message.type === 'user' ? 'text-primary-100' : 'text-gray-500'
+                    }`}>
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white text-gray-800 shadow-sm border px-4 py-2 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+                    <span className="text-sm">AI is thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Message Input */}
+          <form onSubmit={handleSendMessage} className="flex space-x-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask me anything about your business..."
+              className="flex-1 input-field"
+              disabled={chatLoading}
+            />
+            <button
+              type="submit"
+              disabled={!chatInput.trim() || chatLoading}
+              className="btn-primary px-6 flex items-center space-x-2"
+            >
+              {chatLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <MessageSquare size={16} />
+                  <span>Send</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Business Context Info */}
+        <div className="card bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <Lightbulb className="text-orange-500" size={20} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-orange-900 mb-1">Smart Business Assistant</h4>
+              <p className="text-orange-700 text-sm">
+                This AI assistant understands your business context and provides personalized advice. 
+                Ask about marketing strategies, operational improvements, customer engagement, financial planning, and more!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -594,13 +752,7 @@ const AITools = () => {
             <p className="text-gray-600">AI-powered business suggestions and coaching features are in development.</p>
           </div>
         )}
-        {activeTab === 'chat' && (
-          <div className="card text-center py-16">
-            <MessageSquare size={48} className="text-orange-500 mx-auto mb-4" />
-            <h3 className="heading-3 text-gray-900 mb-2">AI Assistant Coming Soon</h3>
-            <p className="text-gray-600">24/7 AI business assistant is being developed for you.</p>
-          </div>
-        )}
+        {activeTab === 'chat' && <AIAssistant />}
       </div>
     </div>
   );

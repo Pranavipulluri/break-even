@@ -44,35 +44,117 @@ def get_qr_code_dev():
         
         # If no real websites found, create some sample ones for development
         if not deployed_websites:
-            deployed_websites = [
+            # Add sample deployed websites to the database for testing
+            sample_sites = [
                 {
-                    'id': 'sample-netlify-1',
-                    'name': 'My Coffee Shop',
-                    'url': 'https://my-coffee-shop-08021430.netlify.app',
+                    'website_name': 'Pranavi Bakery',
+                    'site_name': 'Pranavi Bakery',
+                    'website_url': 'https://pranavi-bakery.netlify.app',
                     'platform': 'netlify',
-                    'created_at': datetime.utcnow()
+                    'business_info': {
+                        'business_name': 'Pranavi Bakery',
+                        'business_type': 'bakery',
+                        'location': 'Downtown'
+                    },
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True,
+                    'status': 'deployed'
                 },
                 {
-                    'id': 'sample-github-1', 
-                    'name': 'Tech Startup',
-                    'url': 'https://username.github.io/tech-startup',
-                    'platform': 'github',
-                    'created_at': datetime.utcnow()
+                    'website_name': 'Visesh Clothing Store',
+                    'site_name': 'Visesh Clothing Store', 
+                    'website_url': 'https://visesh-clothing.netlify.app',
+                    'platform': 'netlify',
+                    'business_info': {
+                        'business_name': 'Visesh Clothing Store',
+                        'business_type': 'retail',
+                        'location': 'Shopping Mall'
+                    },
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True,
+                    'status': 'deployed'
+                },
+                {
+                    'website_name': 'Tech Solutions Hub',
+                    'site_name': 'Tech Solutions Hub',
+                    'website_url': 'https://tech-solutions-hub.netlify.app',
+                    'platform': 'netlify',
+                    'business_info': {
+                        'business_name': 'Tech Solutions Hub',
+                        'business_type': 'technology',
+                        'location': 'Business District'
+                    },
+                    'created_at': datetime.utcnow(),
+                    'dev_deployment': True,
+                    'status': 'deployed'
                 }
             ]
+            
+            # Insert sample sites into deployed_sites collection
+            try:
+                from app import mongo
+                for site in sample_sites:
+                    # Check if site already exists
+                    existing = mongo.db.deployed_sites.find_one({'website_url': site['website_url']})
+                    if not existing:
+                        result = mongo.db.deployed_sites.insert_one(site)
+                        deployed_websites.append({
+                            'id': str(result.inserted_id),
+                            'name': site['website_name'],
+                            'url': site['website_url'],
+                            'platform': site['platform'],
+                            'created_at': site['created_at']
+                        })
+                        print(f"✅ Added sample deployed site: {site['website_name']} -> {site['website_url']}")
+                    else:
+                        deployed_websites.append({
+                            'id': str(existing['_id']),
+                            'name': existing['website_name'],
+                            'url': existing['website_url'],
+                            'platform': existing['platform'],
+                            'created_at': existing['created_at']
+                        })
+                        print(f"🔄 Using existing deployed site: {existing['website_name']}")
+            except Exception as e:
+                print(f"Could not create sample sites: {e}")
+                # Fallback to hardcoded data
+                deployed_websites = [
+                    {
+                        'id': 'sample-netlify-1',
+                        'name': 'Pranavi Bakery',
+                        'url': 'https://pranavi-bakery.netlify.app',
+                        'platform': 'netlify',
+                        'created_at': datetime.utcnow()
+                    },
+                    {
+                        'id': 'sample-netlify-2',
+                        'name': 'Visesh Clothing Store',
+                        'url': 'https://visesh-clothing.netlify.app',
+                        'platform': 'netlify',
+                        'created_at': datetime.utcnow()
+                    },
+                    {
+                        'id': 'sample-netlify-3',
+                        'name': 'Tech Solutions Hub',
+                        'url': 'https://tech-solutions-hub.netlify.app',
+                        'platform': 'netlify',
+                        'created_at': datetime.utcnow()
+                    }
+                ]
         
         # Use the first deployed website URL if available, otherwise use a sample
-        default_url = 'http://localhost:3001'
+        default_url = 'https://pranavi-bakery.netlify.app'  # Default to first sample site
         if deployed_websites and deployed_websites[0]['url']:
             default_url = deployed_websites[0]['url']
         
         return jsonify({
             'websiteUrl': default_url,
-            'totalScans': 15,
-            'scansToday': 3,
+            'totalScans': 25,  # Mock analytics
+            'scansToday': 5,
             'lastScan': datetime.utcnow().isoformat(),
             'deployedWebsites': deployed_websites,
-            'qrCodeId': 'dev-qr-id'
+            'qrCodeId': 'dev-qr-id',
+            'message': f'QR Code will redirect to: {default_url}'
         }), 200
         
     except Exception as e:
@@ -109,14 +191,31 @@ def get_qr_code():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Get user's deployed websites from website builder
-        deployed_websites = list(mongo.db.child_websites.find({
+        # Get user's deployed websites from website builder and deployed_sites collection
+        deployed_websites = []
+        
+        # Check child_websites collection
+        child_websites = list(mongo.db.child_websites.find({
             'user_id': ObjectId(current_user_id),
             'website_url': {'$exists': True, '$ne': None}
         }).sort('created_at', -1))
         
-        # Default website URL - use deployed website if available
-        website_url = f"{current_app.config.get('WEBSITE_BASE_URL', 'https://your-domain.com')}/{user.get('business_name', '').replace(' ', '-').lower() or current_user_id}"
+        # Check deployed_sites collection
+        deployed_sites = list(mongo.db.deployed_sites.find({
+            'website_url': {'$exists': True, '$ne': None}
+        }).sort('created_at', -1).limit(5))
+        
+        # Combine both sources
+        deployed_websites = child_websites + deployed_sites
+        
+        # Default website URL - prioritize deployed URLs over localhost
+        default_deployed_urls = [
+            'https://pranavi-bakery.netlify.app',
+            'https://visesh-clothing.netlify.app', 
+            'https://tech-solutions-hub.netlify.app'
+        ]
+        
+        website_url = default_deployed_urls[0]  # Use first deployed URL as default
         
         # Check if user has a custom QR URL setting
         qr_settings = mongo.db.qr_settings.find_one({'user_id': ObjectId(current_user_id)})
@@ -479,6 +578,153 @@ def reset_qr_analytics():
         
         # Optionally, remove individual scan records
         # mongo.db.qr_scans.delete_many({'user_id': ObjectId(current_user_id)})
+        
+        return jsonify({'message': 'QR code analytics reset successfully'}), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error resetting QR analytics: {e}")
+        return jsonify({'error': 'Failed to reset QR code analytics'}), 500
+
+@qr_bp.route('/qr-code/add-deployed-site', methods=['POST'])
+@jwt_required()
+def add_deployed_site():
+    """Add a deployed website for QR code generation"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        website_name = data.get('website_name')
+        website_url = data.get('website_url')
+        platform = data.get('platform', 'netlify')
+        
+        if not website_name or not website_url:
+            return jsonify({'error': 'Website name and URL are required'}), 400
+        
+        # Validate URL format
+        if not website_url.startswith(('http://', 'https://')):
+            return jsonify({'error': 'URL must start with http:// or https://'}), 400
+        
+        # Create deployed site record
+        deployed_site = {
+            'user_id': ObjectId(current_user_id),
+            'website_name': website_name,
+            'site_name': website_name,
+            'website_url': website_url,
+            'platform': platform,
+            'business_info': {
+                'business_name': website_name,
+                'business_type': data.get('business_type', 'business'),
+                'location': data.get('location', 'Online')
+            },
+            'created_at': datetime.utcnow(),
+            'status': 'deployed',
+            'added_by_user': True
+        }
+        
+        # Insert into database
+        result = mongo.db.deployed_sites.insert_one(deployed_site)
+        
+        return jsonify({
+            'message': 'Deployed website added successfully',
+            'site_id': str(result.inserted_id),
+            'website_url': website_url,
+            'success': True
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error adding deployed site: {e}")
+        return jsonify({'error': 'Failed to add deployed website'}), 500
+
+@qr_bp.route('/qr-code/create-sample-data', methods=['POST'])
+def create_sample_deployed_sites():
+    """Create sample deployed websites for QR code testing (development only)"""
+    try:
+        sample_sites = [
+            {
+                'website_name': 'Pranavi Bakery',
+                'site_name': 'Pranavi Bakery',
+                'website_url': 'https://pranavi-bakery.netlify.app',
+                'platform': 'netlify',
+                'business_info': {
+                    'business_name': 'Pranavi Bakery',
+                    'business_type': 'bakery',
+                    'location': 'Downtown',
+                    'description': 'Fresh baked goods daily',
+                    'contact': 'pulluripranavi@gmail.com'
+                },
+                'created_at': datetime.utcnow(),
+                'dev_deployment': True,
+                'status': 'deployed',
+                'qr_enabled': True
+            },
+            {
+                'website_name': 'Visesh Clothing Store',
+                'site_name': 'Visesh Clothing Store',
+                'website_url': 'https://visesh-clothing.netlify.app',
+                'platform': 'netlify',
+                'business_info': {
+                    'business_name': 'Visesh Clothing Store',
+                    'business_type': 'retail',
+                    'location': 'Shopping Mall',
+                    'description': 'Trendy fashion for all ages',
+                    'contact': 'visesh.bappana@gmail.com'
+                },
+                'created_at': datetime.utcnow(),
+                'dev_deployment': True,
+                'status': 'deployed',
+                'qr_enabled': True
+            },
+            {
+                'website_name': 'Tech Solutions Hub',
+                'site_name': 'Tech Solutions Hub',
+                'website_url': 'https://tech-solutions-hub.netlify.app',
+                'platform': 'netlify',
+                'business_info': {
+                    'business_name': 'Tech Solutions Hub',
+                    'business_type': 'technology',
+                    'location': 'Business District',
+                    'description': 'Innovative tech solutions for businesses',
+                    'contact': 'info@techsolutions.com'
+                },
+                'created_at': datetime.utcnow(),
+                'dev_deployment': True,
+                'status': 'deployed',
+                'qr_enabled': True
+            }
+        ]
+        
+        created_sites = []
+        
+        from app import mongo
+        for site in sample_sites:
+            # Check if site already exists
+            existing = mongo.db.deployed_sites.find_one({'website_url': site['website_url']})
+            if not existing:
+                result = mongo.db.deployed_sites.insert_one(site)
+                created_sites.append({
+                    'id': str(result.inserted_id),
+                    'name': site['website_name'],
+                    'url': site['website_url'],
+                    'platform': site['platform']
+                })
+            else:
+                created_sites.append({
+                    'id': str(existing['_id']),
+                    'name': existing['website_name'],
+                    'url': existing['website_url'],
+                    'platform': existing['platform'],
+                    'status': 'already_exists'
+                })
+        
+        return jsonify({
+            'message': f'Sample deployed sites created/verified successfully',
+            'sites': created_sites,
+            'total_created': len([s for s in created_sites if s.get('status') != 'already_exists']),
+            'success': True
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create sample sites: {str(e)}'}), 500
         
         return jsonify({'message': 'Analytics reset successfully'}), 200
         

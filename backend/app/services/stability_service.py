@@ -11,7 +11,16 @@ logger = logging.getLogger(__name__)
 
 class StabilityService:
     def __init__(self):
+        # Try to get API key from environment or config
         self.api_key = os.getenv('STABILITY_API_KEY')
+        if not self.api_key:
+            try:
+                from flask import current_app
+                self.api_key = current_app.config.get('STABILITY_API_KEY')
+            except RuntimeError:
+                # Fallback when outside application context
+                self.api_key = 'sk-Ci8STOuJz4ZE1xGzmQXFDoykscMoNFoD4OCQZr5BlWgd83O2'
+        
         self.base_url = "https://api.stability.ai"
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",

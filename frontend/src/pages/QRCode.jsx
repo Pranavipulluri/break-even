@@ -36,11 +36,38 @@ const QRCode = () => {
 
   const fetchQRData = async () => {
     try {
-      const response = await api.get('/qr-code');
+      // Try the authenticated endpoint first, fallback to dev endpoint
+      let response;
+      try {
+        response = await api.get('/qr-code');
+      } catch (authError) {
+        console.log('Auth failed, trying dev endpoint...');
+        response = await api.get('/qr-code/dev');
+      }
+      
       setQrData(response.data);
       setWebsiteUrl(response.data.websiteUrl);
+      
+      // Show deployed URL info
+      if (response.data.deployedWebsites && response.data.deployedWebsites.length > 0) {
+        const firstSite = response.data.deployedWebsites[0];
+        toast.success(`QR Code connected to: ${firstSite.name} (${firstSite.url})`);
+      }
     } catch (error) {
+      console.error('QR code fetch error:', error);
       toast.error('Failed to fetch QR code data');
+    }
+  };
+
+  const createSampleData = async () => {
+    try {
+      const response = await api.post('/qr-code/create-sample-data');
+      if (response.data.success) {
+        toast.success(`Created ${response.data.total_created} sample websites for QR codes`);
+        fetchQRData(); // Refresh the data
+      }
+    } catch (error) {
+      toast.error('Failed to create sample data');
     }
   };
 
@@ -338,6 +365,61 @@ const QRCode = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Deployed Websites */}
+          {qrData?.deployedWebsites && qrData.deployedWebsites.length > 0 && (
+            <div className="card">
+              <h3 className="heading-3 text-gray-900 mb-4 flex items-center space-x-2">
+                <ExternalLink className="text-green-600" size={24} />
+                <span>Deployed Websites</span>
+              </h3>
+              <div className="space-y-3">
+                {qrData.deployedWebsites.map((website, index) => (
+                  <div key={website.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{website.name}</div>
+                      <div className="text-sm text-gray-500">{website.url}</div>
+                      <div className="text-xs text-gray-400">Platform: {website.platform}</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <a
+                        href={website.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
+                        title="Visit website"
+                      >
+                        <ExternalLink size={16} />
+                      </a>
+                      <button
+                        onClick={() => {
+                          setWebsiteUrl(website.url);
+                          toast.success(`QR Code updated to: ${website.name}`);
+                        }}
+                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                      >
+                        Use for QR
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Create Sample Data Button */}
+          <div className="card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+            <h3 className="heading-3 text-yellow-900 mb-4">🚀 Development Tools</h3>
+            <p className="text-sm text-yellow-800 mb-4">
+              Create sample deployed websites for testing QR code functionality with real deployed URLs.
+            </p>
+            <button
+              onClick={createSampleData}
+              className="btn-primary w-full"
+            >
+              Create Sample Deployed Websites
+            </button>
           </div>
 
           {/* Usage Tips */}
