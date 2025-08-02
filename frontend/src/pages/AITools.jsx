@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Image as ImageIcon, MessageSquare, Lightbulb, Download, Copy, Wand2 } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, MessageSquare, Lightbulb, Download, Copy, Wand2, Zap, Brain, Palette, FileText, Camera } from 'lucide-react';
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
-import Modal from '../components/common/Modal';
 
 const AITools = () => {
   const [activeTab, setActiveTab] = useState('content');
@@ -13,6 +12,37 @@ const AITools = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [conversationId, setConversationId] = useState(null);
+
+  const tabs = [
+    { 
+      id: 'content', 
+      name: 'Content Generator', 
+      icon: FileText, 
+      description: 'Create engaging content with AI',
+      gradient: 'from-blue-500 to-indigo-600'
+    },
+    { 
+      id: 'images', 
+      name: 'Image Generator', 
+      icon: Camera, 
+      description: 'Generate stunning visuals',
+      gradient: 'from-purple-500 to-pink-600'
+    },
+    { 
+      id: 'suggestions', 
+      name: 'Business Coach', 
+      icon: Brain, 
+      description: 'Get AI-powered business advice',
+      gradient: 'from-green-500 to-emerald-600'
+    },
+    { 
+      id: 'chat', 
+      name: 'AI Assistant', 
+      icon: MessageSquare, 
+      description: '24/7 business support chat',
+      gradient: 'from-orange-500 to-red-600'
+    },
+  ];
 
   const generateContent = async (contentType, prompt, businessContext = '') => {
     try {
@@ -102,44 +132,57 @@ const AITools = () => {
     const [prompt, setPrompt] = useState('');
     const [businessContext, setBusinessContext] = useState('');
 
-    return (
-      <div className="space-y-6">
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Content</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Content Type
-              </label>
-              <select
-                value={contentType}
-                onChange={(e) => setContentType(e.target.value)}
-                className="input-field"
-              >
-                <option value="product_description">Product Description</option>
-                <option value="marketing_copy">Marketing Copy</option>
-                <option value="social_media">Social Media Post</option>
-                <option value="email_campaign">Email Campaign</option>
-                <option value="blog_post">Blog Post</option>
-              </select>
-            </div>
+    const contentTypes = [
+      { value: 'product_description', label: 'Product Description', icon: '📦' },
+      { value: 'marketing_copy', label: 'Marketing Copy', icon: '📢' },
+      { value: 'social_media', label: 'Social Media Post', icon: '📱' },
+      { value: 'email_campaign', label: 'Email Campaign', icon: '📧' },
+      { value: 'blog_post', label: 'Blog Post', icon: '📝' },
+    ];
 
+    return (
+      <div className="space-y-8">
+        {/* Content Type Selection */}
+        <div className="card">
+          <h3 className="heading-3 text-gray-900 mb-6">Choose Content Type</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {contentTypes.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setContentType(type.value)}
+                className={`p-4 rounded-xl border-2 transition-all duration-200 text-center hover:scale-105 ${
+                  contentType === type.value
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-lg'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-2xl mb-2">{type.icon}</div>
+                <div className="font-medium text-sm">{type.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Form */}
+        <div className="card">
+          <h3 className="heading-3 text-gray-900 mb-6">Generate Content</h3>
+          
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                What do you want to create? *
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                What would you like to create? *
               </label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                rows="3"
-                className="input-field"
-                placeholder="Describe what you want to create..."
+                rows="4"
+                className="input-field resize-none"
+                placeholder="Describe what you want to create in detail..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Business Context (Optional)
               </label>
               <input
@@ -154,32 +197,50 @@ const AITools = () => {
             <button
               onClick={() => generateContent(contentType, prompt, businessContext)}
               disabled={!prompt || loading}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
+              className="btn-primary w-full btn-lg relative overflow-hidden group"
             >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <Wand2 size={16} />
-              )}
-              <span>{loading ? 'Generating...' : 'Generate Content'}</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-primary-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative flex items-center justify-center space-x-2">
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={18} />
+                    <span>Generate Content</span>
+                  </>
+                )}
+              </div>
             </button>
           </div>
         </div>
 
+        {/* Generated Content */}
         {generatedContent && (
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Generated Content</h3>
+          <div className="card border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="heading-3 text-green-900 flex items-center space-x-2">
+                <Sparkles className="text-green-600" size={20} />
+                <span>Generated Content</span>
+              </h3>
               <button
-                onClick={() => copyToClipboard(generatedContent)}
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedContent);
+                  toast.success('Copied to clipboard!');
+                }}
                 className="btn-secondary flex items-center space-x-2"
               >
                 <Copy size={16} />
                 <span>Copy</span>
               </button>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="whitespace-pre-wrap text-gray-800">{generatedContent}</p>
+            
+            <div className="bg-white/80 backdrop-blur-sm border border-green-200 rounded-xl p-6">
+              <pre className="whitespace-pre-wrap text-gray-800 font-sans leading-relaxed">
+                {generatedContent}
+              </pre>
             </div>
           </div>
         )}
@@ -191,6 +252,21 @@ const AITools = () => {
     const [prompt, setPrompt] = useState('');
     const [imageType, setImageType] = useState('poster');
     const [style, setStyle] = useState('modern');
+
+    const imageTypes = [
+      { value: 'poster', label: 'Marketing Poster', icon: '🎨' },
+      { value: 'logo', label: 'Business Logo', icon: '🏷' },
+      { value: 'product_image', label: 'Product Image', icon: '📸' },
+      { value: 'social_media', label: 'Social Media', icon: '📱' },
+    ];
+
+    const styles = [
+      { value: 'modern', label: 'Modern', preview: '🎯' },
+      { value: 'classic', label: 'Classic', preview: '🏛' },
+      { value: 'minimalist', label: 'Minimalist', preview: '⚪' },
+      { value: 'vibrant', label: 'Vibrant', preview: '🌈' },
+      { value: 'professional', label: 'Professional', preview: '💼' },
+    ];
 
     return (
       <div className="space-y-6">
@@ -232,32 +308,28 @@ const AITools = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Describe your image *
+                Description
               </label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows="3"
                 className="input-field"
-                placeholder="Describe the image you want to create..."
+                placeholder="Describe the image you want to generate..."
               />
             </div>
 
             <button
               onClick={() => generateImage(prompt, imageType, style)}
               disabled={!prompt || loading}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
+              className="btn-primary w-full"
             >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <ImageIcon size={16} />
-              )}
-              <span>{loading ? 'Generating...' : 'Generate Image'}</span>
+              {loading ? 'Generating...' : 'Generate Image'}
             </button>
           </div>
         </div>
 
+        {/* Image Preview */}
         {generatedImage && (
           <div className="card">
             <div className="flex justify-between items-center mb-4">
@@ -306,187 +378,69 @@ const AITools = () => {
     );
   };
 
-  const BusinessSuggestions = () => {
-    const [suggestionType, setSuggestionType] = useState('general');
-
-    const getPriorityColor = (priority) => {
-      switch (priority) {
-        case 'high': return 'bg-red-100 text-red-800';
-        case 'medium': return 'bg-yellow-100 text-yellow-800';
-        case 'low': return 'bg-green-100 text-green-800';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Get Business Suggestions</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Suggestion Type
-              </label>
-              <select
-                value={suggestionType}
-                onChange={(e) => setSuggestionType(e.target.value)}
-                className="input-field"
-              >
-                <option value="general">General Business</option>
-                <option value="marketing">Marketing</option>
-                <option value="products">Products</option>
-                <option value="website">Website</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => getBusinessSuggestions(suggestionType)}
-              disabled={loading}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <Lightbulb size={16} />
-              )}
-              <span>{loading ? 'Generating...' : 'Get Suggestions'}</span>
-            </button>
-          </div>
-        </div>
-
-        {suggestions.length > 0 && (
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Suggestions</h3>
-            <div className="space-y-4">
-              {suggestions.map((suggestion, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900">{suggestion.title}</h4>
-                    <div className="flex space-x-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(suggestion.priority)}`}>
-                        {suggestion.priority}
-                      </span>
-                      <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                        {suggestion.category}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 text-sm mb-2">{suggestion.description}</p>
-                  <div className="flex justify-between items-center text-xs text-gray-500">
-                    <span>Effort: {suggestion.effort}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const AIChat = () => {
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      if (chatInput.trim()) {
-        sendChatMessage(chatInput.trim());
-      }
-    };
-
-    return (
-      <div className="card">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Business Assistant</h3>
-        
-        <div className="h-96 border border-gray-200 rounded-lg flex flex-col">
-          <div className="flex-1 p-4 overflow-y-auto space-y-4">
-            {chatMessages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-20">
-                <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>Ask me anything about your business!</p>
-                <p className="text-sm">I can help with marketing, products, customers, and more.</p>
-              </div>
-            ) : (
-              chatMessages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.type === 'user'
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 input-field"
-              />
-              <button
-                type="submit"
-                disabled={!chatInput.trim()}
-                className="btn-primary"
-              >
-                Send
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">AI Tools</h1>
-        <p className="text-gray-600 mt-2">Powered by artificial intelligence to help grow your business</p>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="heading-1 mb-4">AI-Powered Tools</h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Leverage the power of artificial intelligence to create content, generate images, 
+          and get business insights that help your business grow.
+        </p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { id: 'content', name: 'Content Generator', icon: Wand2 },
-            { id: 'images', name: 'Image Generator', icon: ImageIcon },
-            { id: 'suggestions', name: 'Business Suggestions', icon: Lightbulb },
-            { id: 'chat', name: 'AI Assistant', icon: MessageSquare },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <tab.icon size={16} />
-              <span>{tab.name}</span>
-            </button>
-          ))}
-        </nav>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`card-hover text-left p-6 transition-all duration-300 relative overflow-hidden ${
+              activeTab === tab.id 
+                ? `bg-gradient-to-br ${tab.gradient} text-white shadow-colored` 
+                : 'hover:shadow-medium'
+            }`}
+          >
+            <div className="relative z-10">
+              <tab.icon size={24} className={`mb-3 ${activeTab === tab.id ? 'text-white' : 'text-gray-600'}`} />
+              <h3 className={`font-semibold mb-2 ${activeTab === tab.id ? 'text-white' : 'text-gray-900'}`}>
+                {tab.name}
+              </h3>
+              <p className={`text-sm ${activeTab === tab.id ? 'text-white/80' : 'text-gray-600'}`}>
+                {tab.description}
+              </p>
+            </div>
+            
+            {activeTab === tab.id && (
+              <div className="absolute top-2 right-2">
+                <div className="w-3 h-3 bg-white/30 rounded-full animate-pulse"></div>
+              </div>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'content' && <ContentGenerator />}
-      {activeTab === 'images' && <ImageGenerator />}
-      {activeTab === 'suggestions' && <BusinessSuggestions />}
-      {activeTab === 'chat' && <AIChat />}
+      <div className="min-h-[600px]">
+        {activeTab === 'content' && <ContentGenerator />}
+        {activeTab === 'images' && <ImageGenerator />}
+        {activeTab === 'suggestions' && (
+          <div className="card text-center py-16">
+            <Brain size={48} className="text-green-500 mx-auto mb-4" />
+            <h3 className="heading-3 text-gray-900 mb-2">Business Coach Coming Soon</h3>
+            <p className="text-gray-600">AI-powered business suggestions and coaching features are in development.</p>
+          </div>
+        )}
+        {activeTab === 'chat' && (
+          <div className="card text-center py-16">
+            <MessageSquare size={48} className="text-orange-500 mx-auto mb-4" />
+            <h3 className="heading-3 text-gray-900 mb-2">AI Assistant Coming Soon</h3>
+            <p className="text-gray-600">24/7 AI business assistant is being developed for you.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default AITools;
+export default AITools;
