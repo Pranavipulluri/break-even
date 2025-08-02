@@ -1,6 +1,19 @@
-
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Package, 
+  MessageSquare, 
+  BarChart3, 
+  QrCode, 
+  Sparkles, 
+  Settings,
+  PlusCircle,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Zap
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);

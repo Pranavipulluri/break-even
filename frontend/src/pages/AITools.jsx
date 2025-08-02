@@ -12,6 +12,11 @@ const AITools = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [conversationId, setConversationId] = useState(null);
+  const [emailCampaignResults, setEmailCampaignResults] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [currentGenerationId, setCurrentGenerationId] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('Marketing Campaign Email');
 
   const tabs = [
     { 
@@ -54,7 +59,26 @@ const AITools = () => {
       });
       
       setGeneratedContent(response.data.content);
-      toast.success('Content generated successfully!');
+      
+      // Check if email campaign requires confirmation
+      if (response.data.requires_confirmation && response.data.generation_id) {
+        setCurrentGenerationId(response.data.generation_id);
+        setShowEmailConfirmation(true);
+        toast.success('Email content generated! Please confirm to send to customers.');
+      } else {
+        toast.success('Content generated successfully!');
+      }
+      if (response.data.mock_email_results) {
+        setEmailCampaignResults(response.data.mock_email_results);
+        if (response.data.mock_email_results.success) {
+          toast.success(`Content generated and mock email campaign sent to ${response.data.mock_email_results.summary.successful_sends} recipients!`);
+        } else {
+          toast.success('Content generated successfully!');
+          toast.error('Mock email sending failed');
+        }
+      } else {
+        toast.success('Content generated successfully!');
+      }
     } catch (error) {
       toast.error('Failed to generate content');
     } finally {
@@ -82,6 +106,62 @@ const AITools = () => {
       toast.error('Failed to generate image');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendMockEmails = async (emailContent, emailSubject = 'Marketing Campaign Email') => {
+    try {
+      setSendingEmails(true);
+      setEmailCampaignResults(null);
+      
+      const response = await api.post('/ai-tools/mock-email-send', {
+        email_content: emailContent,
+        email_subject: emailSubject
+      });
+      
+      if (response.data.success) {
+        setEmailCampaignResults(response.data);
+        toast.success(`Mock email campaign sent! ${response.data.summary.successful_sends} emails delivered successfully!`);
+      } else {
+        toast.error(response.data.error || 'Failed to send mock emails');
+      }
+    } catch (error) {
+      toast.error('Failed to send mock emails');
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
+  const confirmEmailCampaign = async (confirmed) => {
+    if (!confirmed) {
+      setShowEmailConfirmation(false);
+      setCurrentGenerationId(null);
+      toast.info('Email campaign cancelled.');
+      return;
+    }
+
+    try {
+      setSendingEmails(true);
+      setEmailCampaignResults(null);
+      
+      const response = await api.post('/ai-tools/confirm-email-campaign', {
+        generation_id: currentGenerationId,
+        email_subject: emailSubject,
+        confirmed: true
+      });
+      
+      if (response.data.success) {
+        setEmailCampaignResults(response.data);
+        setShowEmailConfirmation(false);
+        setCurrentGenerationId(null);
+        toast.success(`Email campaign sent! ${response.data.summary.successful_sends} emails delivered successfully!`);
+      } else {
+        toast.error(response.data.error || 'Failed to send email campaign');
+      }
+    } catch (error) {
+      toast.error('Failed to send email campaign');
+    } finally {
+      setSendingEmails(false);
     }
   };
 
@@ -241,6 +321,89 @@ const AITools = () => {
               <pre className="whitespace-pre-wrap text-gray-800 font-sans leading-relaxed">
                 {generatedContent}
               </pre>
+            </div>
+
+            {/* Auto Email Campaign Notification for Email Content */}
+            {contentType === 'email_campaign' && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="flex items-center mb-4">
+                  <h4 className="text-lg font-semibold text-green-900 flex items-center space-x-2">
+                    <span>✅</span>
+                    <span>Email Campaign Auto-Sent!</span>
+                  </h4>
+                </div>
+                <p className="text-green-700 text-sm">
+                  Your email campaign has been automatically sent to 20 mock recipients including:
+                  <br />
+                  <strong>pulluripranavi@gmail.com</strong> and <strong>visesh.bappana@gmail.com</strong>
+                  <br />
+                  Check the results below for delivery details.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mock Email Campaign Results */}
+        {emailCampaignResults && (
+          <div className="card border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="heading-3 text-blue-900 flex items-center space-x-2">
+                <span>📊</span>
+                <span>Mock Email Campaign Results</span>
+              </h3>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-4 bg-green-100 rounded-lg">
+                  <div className="text-2xl font-bold text-green-800">{emailCampaignResults.summary.total_recipients}</div>
+                  <div className="text-sm text-green-600">Total Recipients</div>
+                </div>
+                <div className="text-center p-4 bg-blue-100 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-800">{emailCampaignResults.summary.successful_sends}</div>
+                  <div className="text-sm text-blue-600">Successfully Sent</div>
+                </div>
+                <div className="text-center p-4 bg-red-100 rounded-lg">
+                  <div className="text-2xl font-bold text-red-800">{emailCampaignResults.summary.failed_sends}</div>
+                  <div className="text-sm text-red-600">Failed</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-100 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-800">{emailCampaignResults.summary.success_rate}</div>
+                  <div className="text-sm text-yellow-600">Success Rate</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold text-green-800 mb-2">✅ Successfully Sent ({emailCampaignResults.sent_emails.length})</h4>
+                  <div className="max-h-40 overflow-y-auto bg-green-50 p-3 rounded border">
+                    {emailCampaignResults.sent_emails.slice(0, 10).map((email, index) => (
+                      <div key={index} className="text-sm text-green-700 py-1 border-b border-green-200 last:border-b-0">
+                        📧 {email.email} - {email.status} (ID: {email.message_id})
+                      </div>
+                    ))}
+                    {emailCampaignResults.sent_emails.length > 10 && (
+                      <div className="text-sm text-green-600 pt-2 font-medium">
+                        ... and {emailCampaignResults.sent_emails.length - 10} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {emailCampaignResults.failed_emails.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-red-800 mb-2">❌ Failed Sends ({emailCampaignResults.failed_emails.length})</h4>
+                    <div className="max-h-32 overflow-y-auto bg-red-50 p-3 rounded border">
+                      {emailCampaignResults.failed_emails.map((email, index) => (
+                        <div key={index} className="text-sm text-red-700 py-1 border-b border-red-200 last:border-b-0">
+                          ❌ {email.email} - {email.error}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
