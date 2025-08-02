@@ -1,0 +1,56 @@
+[build]
+  publish = "frontend/dist"
+  command = "cd frontend && npm run build"
+  functions = "netlify-functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[dev]
+  command = "cd frontend && npm run dev"
+  targetPort = 5173
+  port = 8888
+  publish = "frontend/dist"
+  functions = "netlify-functions"
+
+# Environment variables (set these in Netlify dashboard)
+# MONGODB_URI = "your-mongodb-connection-string"
+# JWT_SECRET = "your-jwt-secret-key"
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# API redirects
+[[redirects]]
+  from = "/api/public/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/customer/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Child website template endpoint
+[[redirects]]
+  from = "/child/:business_id"
+  to = "/child_website_template/enhanced-mini-website-template.html?business_id=:business_id"
+  status = 200
+
+# SPA fallback for frontend
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin"], Country = ["!exceptions"]}
+
+# Edge functions for better performance (optional)
+[[edge_functions]]
+  function = "geolocation"
+  path = "/api/location/*"

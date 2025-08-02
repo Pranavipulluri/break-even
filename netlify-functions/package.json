@@ -1,0 +1,30 @@
+{
+  "name": "break-even-netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Break-Even Application with Customer Authentication",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "mongodb": "^5.7.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "validator": "^13.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5"
+  },
+  "keywords": [
+    "netlify",
+    "functions", 
+    "mongodb",
+    "authentication",
+    "customer-management",
+    "break-even",
+    "serverless"
+  ],
+  "author": "Break-Even Team",
+  "license": "MIT"
+}

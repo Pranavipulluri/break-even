@@ -156,6 +156,60 @@ const WebsiteBuilder = () => {
     }
   };
 
+  const createDataCollectionWebsite = async () => {
+    try {
+      setAiLoading(true);
+      
+      const formData = watch();
+      if (!formData.website_name) {
+        toast.error('Please enter a website name first');
+        return;
+      }
+
+      toast.loading('🚀 Creating data collection website...', { duration: 3000 });
+      
+      const websiteData = {
+        title: formData.website_name,
+        description: `Join the ${formData.website_name} community and share your valuable feedback with us.`,
+        content: `Welcome to ${formData.website_name}! We're building something amazing and we'd love to have you as part of our journey. Sign up to stay updated and let us know what you think.`,
+        business_id: formData.business_id || null
+      };
+
+      // Use development endpoint for data collection website
+      const response = await fetch('http://localhost:5000/api/ai-tools/dev/create-data-website', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(websiteData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.website_url) {
+        setCurrentWebsite({
+          ...formData,
+          website_url: result.website_url,
+          netlify_url: result.netlify_url,
+          has_data_collection: true,
+          features: ['user_registration', 'feedback_collection', 'sentiment_analysis'],
+          created_at: new Date().toISOString()
+        });
+        
+        toast.success('✅ Data collection website created successfully!');
+        toast.success(`🌐 Website URL: ${result.website_url}`, { duration: 8000 });
+      } else {
+        throw new Error(result.error || 'Failed to create data collection website');
+      }
+
+    } catch (error) {
+      console.error('Data Collection Website Creation Error:', error);
+      toast.error(error.message || 'Failed to create data collection website');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const onSubmit = async (data) => {
     try {
       setLoading(true);
@@ -580,6 +634,20 @@ const WebsiteBuilder = () => {
                 <Rocket size={16} />
               )}
               <span>Deploy to GitHub Pages</span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={createDataCollectionWebsite}
+              disabled={aiLoading}
+              className="btn-primary flex items-center space-x-2 bg-purple-600 hover:bg-purple-700"
+            >
+              {aiLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Bot size={16} />
+              )}
+              <span>Create Data Collection Site</span>
             </button>
           </div>
           

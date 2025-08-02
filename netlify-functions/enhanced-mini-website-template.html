@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .business-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        
+        .business-info div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #555;
+        }
+        
+        .business-info i {
+            color: #667eea;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-tab {
+            background: none;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .nav-tab:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #9ca3af;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .product-info {
+            padding: 1.5rem;
+        }
+        
+        .product-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-description {
+            color: #666;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .stock-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        
+        .in-stock {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .low-stock {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .out-of-stock {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .interest-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .interest-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .forms-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .form-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .form-card h3 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-top: 0.25rem;
+        }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover:before {
+            left: 100%;
+        }
+        
+        .rating-stars {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        
+        .rating-stars button {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #ddd;
+            transition: all 0.3s ease;
+        }
+        
+        .rating-stars button:hover,
+        .rating-stars button.active {
+            color: #ffd700;
+            transform: scale(1.1);
+        }
+        
+        .feedback-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .category-btn {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .category-btn:hover,
+        .category-btn.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+            color: #666;
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            transform: scale(1.1);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .dashboard-sections {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .dashboard-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .dashboard-card h4 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .feedback-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feedback-item .rating {
+            color: #ffd700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feedback-item .customer-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+        
+        .feedback-item .feedback-text {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feedback-item .feedback-date {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .sentiment-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .sentiment-positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .sentiment-negative {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .sentiment-neutral {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .business-info {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .forms-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>{{title}}</h1>
+            <p>{{description}}</p>
+            <div class="business-info">
+                <div><i class="fas fa-phone"></i> {{phone}}</div>
+                <div><i class="fas fa-envelope"></i> {{email}}</div>
+                <div><i class="fas fa-map-marker-alt"></i> {{address}}</div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('products')">
+                <i class="fas fa-shopping-bag"></i> Our Products
+            </button>
+            <button class="nav-tab" onclick="showTab('feedback')">
+                <i class="fas fa-comments"></i> Customer Feedback
+            </button>
+            <button class="nav-tab" onclick="showTab('login')">
+                <i class="fas fa-user"></i> Customer Login
+            </button>
+            <button class="nav-tab" onclick="showTab('newsletter')">
+                <i class="fas fa-envelope-open"></i> Stay Connected
+            </button>
+        </div>
+        
+        <!-- Products Tab -->
+        <div id="products" class="tab-content active">
+            <div id="productsContainer" class="products-grid">
+                <!-- Products will be loaded here -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                    <div class="loading"></div>
+                    <p style="margin-top: 1rem; color: #666;">Loading our amazing products...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Feedback Tab -->
+        <div id="feedback" class="tab-content">
+            <!-- Enhanced Feedback Section -->
+            <div class="content">
+                <h2 style="text-align: center; color: #667eea; margin-bottom: 2rem;">
+                    <i class="fas fa-comments"></i> We Value Your Feedback
+                </h2>
+                <p style="text-align: center; color: #666; margin-bottom: 3rem;">
+                    Your opinion matters to us! Share your experience and help us improve our products and services.
+                </p>
+            </div>
+            
+            <div class="forms-section">
+                <!-- Customer Feedback Form -->
+                <div class="form-card">
+                    <h3><i class="fas fa-star"></i> Share Your Experience</h3>
+                    <form id="feedbackForm">
+                        <div class="form-group">
+                            <label for="customer_name">Your Name</label>
+                            <input type="text" id="customer_name" name="customer_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="customer_email">Email Address</label>
+                            <input type="email" id="customer_email" name="customer_email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="customer_phone">Phone Number (Optional)</label>
+                            <input type="tel" id="customer_phone" name="customer_phone">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>What's your feedback about?</label>
+                            <div class="feedback-categories">
+                                <div class="category-btn" onclick="selectCategory(this, 'product_quality')">Product Quality</div>
+                                <div class="category-btn" onclick="selectCategory(this, 'customer_service')">Customer Service</div>
+                                <div class="category-btn" onclick="selectCategory(this, 'delivery')">Delivery</div>
+                                <div class="category-btn" onclick="selectCategory(this, 'pricing')">Pricing</div>
+                                <div class="category-btn" onclick="selectCategory(this, 'website')">Website Experience</div>
+                                <div class="category-btn" onclick="selectCategory(this, 'general')">General</div>
+                            </div>
+                            <input type="hidden" id="feedback_category" name="feedback_category" value="general">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Overall Rating</label>
+                            <div class="rating-stars" id="rating-stars">
+                                <button type="button" onclick="setRating(1)">★</button>
+                                <button type="button" onclick="setRating(2)">★</button>
+                                <button type="button" onclick="setRating(3)">★</button>
+                                <button type="button" onclick="setRating(4)">★</button>
+                                <button type="button" onclick="setRating(5)">★</button>
+                            </div>
+                            <input type="hidden" id="rating" name="rating" value="5">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="feedback_message">Your Feedback</label>
+                            <textarea id="feedback_message" name="feedback_message" placeholder="Tell us about your experience..." required></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="product_interest">Interested in any specific products?</label>
+                            <textarea id="product_interest" name="product_interest" placeholder="Let us know which products caught your eye..."></textarea>
+                        </div>
+                        
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="follow_up" name="follow_up" value="yes">
+                            <label for="follow_up">I'd like to receive follow-up communication about my feedback</label>
+                        </div>
+                        
+                        <button type="submit" class="btn">
+                            <span class="btn-text">Submit Feedback</span>
+                        </button>
+                        
+                        <div id="feedback-alert" class="alert"></div>
+                    </form>
+                </div>
+                
+                <!-- Recent Feedback Display -->
+                <div class="form-card">
+                    <h3><i class="fas fa-comments"></i> Recent Customer Reviews</h3>
+                    <div id="recentFeedback" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Recent feedback will be loaded here -->
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <div class="loading"></div>
+                            <p style="margin-top: 1rem;">Loading recent reviews...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customer Login Tab -->
+        <div id="login" class="tab-content">
+            <div class="content">
+                <h2 style="text-align: center; color: #667eea; margin-bottom: 2rem;">
+                    <i class="fas fa-user"></i> Customer Account
+                </h2>
+                <p style="text-align: center; color: #666; margin-bottom: 3rem;">
+                    Login to track your orders, manage your preferences, and get personalized recommendations.
+                </p>
+            </div>
+            
+            <div class="forms-section" style="max-width: 600px; margin: 0 auto;">
+                <!-- Login/Register Toggle -->
+                <div class="form-card">
+                    <div class="nav-tabs" style="margin-bottom: 2rem;">
+                        <button class="nav-tab active" onclick="showAuthTab('login')" style="width: 50%;">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button class="nav-tab" onclick="showAuthTab('register')" style="width: 50%;">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div id="loginForm" class="auth-form active">
+                        <h3><i class="fas fa-sign-in-alt"></i> Welcome Back!</h3>
+                        <form id="customerLoginForm">
+                            <div class="form-group">
+                                <label for="login_email">Email Address</label>
+                                <input type="email" id="login_email" name="login_email" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="login_password">Password</label>
+                                <input type="password" id="login_password" name="login_password" required>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="remember_me" name="remember_me">
+                                <label for="remember_me">Remember me</label>
+                            </div>
+                            
+                            <button type="submit" class="btn">
+                                <span class="btn-text">Login</span>
+                            </button>
+                            
+                            <div style="text-align: center; margin-top: 1rem;">
+                                <a href="#" onclick="showForgotPassword()" style="color: #667eea; text-decoration: none;">
+                                    Forgot your password?
+                                </a>
+                            </div>
+                            
+                            <div id="login-alert" class="alert"></div>
+                        </form>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div id="registerForm" class="auth-form">
+                        <h3><i class="fas fa-user-plus"></i> Create Account</h3>
+                        <form id="customerRegisterForm">
+                            <div class="form-group">
+                                <label for="register_name">Full Name</label>
+                                <input type="text" id="register_name" name="register_name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="register_email">Email Address</label>
+                                <input type="email" id="register_email" name="register_email" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="register_phone">Phone Number</label>
+                                <input type="tel" id="register_phone" name="register_phone">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="register_password">Password</label>
+                                <input type="password" id="register_password" name="register_password" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm Password</label>
+                                <input type="password" id="confirm_password" name="confirm_password" required>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="terms_agree" name="terms_agree" required>
+                                <label for="terms_agree">I agree to the Terms & Conditions and Privacy Policy</label>
+                            </div>
+                            
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="marketing_emails" name="marketing_emails" value="yes">
+                                <label for="marketing_emails">Send me updates about new products and special offers</label>
+                            </div>
+                            
+                            <button type="submit" class="btn">
+                                <span class="btn-text">Create Account</span>
+                            </button>
+                            
+                            <div id="register-alert" class="alert"></div>
+                        </form>
+                    </div>
+                    
+                    <!-- Customer Dashboard (shown after login) -->
+                    <div id="customerDashboard" class="auth-form" style="display: none;">
+                        <h3><i class="fas fa-user-circle"></i> Welcome, <span id="customerName"></span>!</h3>
+                        
+                        <div class="dashboard-sections">
+                            <div class="dashboard-card">
+                                <h4><i class="fas fa-shopping-cart"></i> My Orders</h4>
+                                <div id="customerOrders">
+                                    <p>No orders yet. Browse our products to get started!</p>
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card">
+                                <h4><i class="fas fa-heart"></i> My Interests</h4>
+                                <div id="customerInterests">
+                                    <p>Express interest in products to see them here.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="dashboard-card">
+                                <h4><i class="fas fa-comments"></i> My Feedback</h4>
+                                <div id="customerFeedback">
+                                    <p>Your feedback submissions will appear here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 2rem;">
+                            <button onclick="logoutCustomer()" class="btn" style="background: #dc3545;">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Newsletter Tab -->
+        <div id="newsletter" class="tab-content">
+            <div class="forms-section">
+                <div class="form-card" style="max-width: 600px; margin: 0 auto;">
+                    <h3><i class="fas fa-envelope-open"></i> Stay Connected With Us</h3>
+                    <p style="text-align: center; color: #666; margin-bottom: 2rem;">
+                        Join our newsletter to get the latest updates, special offers, and new product announcements!
+                    </p>
+                    
+                    <form id="newsletterForm">
+                        <div class="form-group">
+                            <label for="newsletter_name">Your Name</label>
+                            <input type="text" id="newsletter_name" name="newsletter_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newsletter_email">Email Address</label>
+                            <input type="email" id="newsletter_email" name="newsletter_email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="interests">What are you interested in?</label>
+                            <div class="feedback-categories">
+                                <div class="category-btn" onclick="toggleInterest(this, 'new_products')">New Products</div>
+                                <div class="category-btn" onclick="toggleInterest(this, 'promotions')">Promotions</div>
+                                <div class="category-btn" onclick="toggleInterest(this, 'tips')">Tips & Guides</div>
+                                <div class="category-btn" onclick="toggleInterest(this, 'events')">Events</div>
+                            </div>
+                            <input type="hidden" id="newsletter_interests" name="newsletter_interests" value="">
+                        </div>
+                        
+                        <button type="submit" class="btn">
+                            <span class="btn-text">Subscribe Now</span>
+                        </button>
+                        
+                        <div id="newsletter-alert" class="alert"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2025 {{title}}. All rights reserved.</p>
+            <p>Powered by Break-even Platform</p>
+            <div class="social-links">
+                <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const BACKEND_URL = '{{backend_url}}';
+        const BUSINESS_ID = '{{business_id}}';
+        const WEBSITE_SOURCE = '{{website_source}}';
+        
+        // Global variables
+        let selectedRating = 5;
+        let selectedCategory = 'general';
+        let selectedInterests = [];
+        let currentCustomer = null;
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            loadRecentFeedback();
+            setRating(5); // Default rating
+            checkCustomerLogin();
+        });
+        
+        // Check if customer is logged in
+        function checkCustomerLogin() {
+            const customer = localStorage.getItem('currentCustomer');
+            if (customer) {
+                currentCustomer = JSON.parse(customer);
+                showCustomerDashboard();
+            }
+        }
+        
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked nav tab
+            event.target.closest('.nav-tab').classList.add('active');
+        }
+        
+        // Auth tab switching
+        function showAuthTab(tabName) {
+            // Hide all auth forms
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            
+            // Remove active class from auth nav tabs
+            document.querySelectorAll('#login .nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected form
+            if (tabName === 'login') {
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.getElementById('registerForm').classList.add('active');
+            }
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        // Load recent feedback
+        async function loadRecentFeedback() {
+            try {
+                const response = await fetch(`/.netlify/functions/get-recent-feedback?business_id=${BUSINESS_ID}`);
+                const data = await response.json();
+                
+                if (data.success && data.feedback) {
+                    displayRecentFeedback(data.feedback);
+                } else {
+                    displayNoFeedback();
+                }
+            } catch (error) {
+                console.error('Error loading recent feedback:', error);
+                displayNoFeedback();
+            }
+        }
+        
+        // Display recent feedback
+        function displayRecentFeedback(feedbackList) {
+            const container = document.getElementById('recentFeedback');
+            
+            if (feedbackList.length === 0) {
+                displayNoFeedback();
+                return;
+            }
+            
+            container.innerHTML = feedbackList.map(feedback => `
+                <div class="feedback-item">
+                    <div class="rating">
+                        ${'★'.repeat(feedback.rating || 5)}${'☆'.repeat(5 - (feedback.rating || 5))}
+                        <span class="sentiment-badge sentiment-${feedback.sentiment || 'neutral'}">
+                            ${(feedback.sentiment || 'neutral').toUpperCase()}
+                        </span>
+                    </div>
+                    <div class="customer-name">${feedback.customer_name || 'Anonymous'}</div>
+                    <div class="feedback-text">${feedback.feedback_message}</div>
+                    <div class="feedback-date">
+                        ${new Date(feedback.created_at).toLocaleDateString()}
+                        ${feedback.feedback_category ? `• ${feedback.feedback_category.replace('_', ' ').toUpperCase()}` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Display no feedback message
+        function displayNoFeedback() {
+            const container = document.getElementById('recentFeedback');
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No feedback yet. Be the first to share your experience!</p>
+                </div>
+            `;
+        }
+        
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked nav tab
+            event.target.closest('.nav-tab').classList.add('active');
+        }
+        
+        // Load products from backend
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/public/products/${BUSINESS_ID}`);
+                const data = await response.json();
+                
+                if (data.success && data.products) {
+                    displayProducts(data.products);
+                } else {
+                    displayNoProducts();
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+                displayNoProducts();
+            }
+        }
+        
+        // Display products
+        function displayProducts(products) {
+            const container = document.getElementById('productsContainer');
+            
+            if (products.length === 0) {
+                displayNoProducts();
+                return;
+            }
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card">
+                    <div class="product-image">
+                        ${product.image ? 
+                            `<img src="${product.image}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div style="display:none; width:100%; height:100%; align-items:center; justify-content:center; font-size:4rem; color:#9ca3af;">
+                                <i class="fas fa-cube"></i>
+                             </div>` :
+                            `<i class="fas fa-cube"></i>`
+                        }
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${product.name}</h3>
+                        <p class="product-description">${product.description}</p>
+                        <div class="product-price">$${parseFloat(product.price).toFixed(2)}</div>
+                        <div class="product-meta">
+                            <span class="category">${product.category}</span>
+                            <span class="stock-status ${getStockClass(product.stock)}">
+                                ${getStockText(product.stock)}
+                            </span>
+                        </div>
+                        <button class="interest-btn" onclick="expressInterest('${product.name}', '${product._id}')">
+                            <i class="fas fa-heart"></i> I'm Interested
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Display no products message
+        function displayNoProducts() {
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                    <i class="fas fa-cube" style="font-size: 4rem; color: #ccc; margin-bottom: 1rem;"></i>
+                    <h3 style="color: #666; margin-bottom: 1rem;">No Products Available</h3>
+                    <p style="color: #888;">We're currently updating our product catalog. Please check back soon!</p>
+                </div>
+            `;
+        }
+        
+        // Get stock status class
+        function getStockClass(stock) {
+            if (stock <= 0) return 'out-of-stock';
+            if (stock <= 5) return 'low-stock';
+            return 'in-stock';
+        }
+        
+        // Get stock status text
+        function getStockText(stock) {
+            if (stock <= 0) return 'Out of Stock';
+            if (stock <= 5) return `Only ${stock} left`;
+            return 'In Stock';
+        }
+        
+        // Express interest in a product
+        function expressInterest(productName, productId) {
+            // Switch to feedback tab and pre-fill product interest
+            showTab('feedback');
+            document.querySelector('.nav-tab[onclick="showTab(\'feedback\')"]').click();
+            
+            // Pre-fill the product interest field
+            document.getElementById('interested_products').value = productName;
+            
+            // Scroll to the form
+            document.getElementById('interestForm').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Rating functionality
+        function setRating(rating) {
+            selectedRating = rating;
+            document.getElementById('rating').value = rating;
+            
+            const stars = document.querySelectorAll('#rating-stars button');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+        
+        // Category selection
+        function selectCategory(element, category) {
+            // Remove active class from all category buttons
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to selected button
+            element.classList.add('active');
+            
+            // Set the hidden field value
+            selectedCategory = category;
+            document.getElementById('feedback_category').value = category;
+        }
+        
+        // Newsletter interests toggle
+        function toggleInterest(element, interest) {
+            element.classList.toggle('active');
+            
+            if (selectedInterests.includes(interest)) {
+                selectedInterests = selectedInterests.filter(i => i !== interest);
+            } else {
+                selectedInterests.push(interest);
+            }
+            
+            document.getElementById('newsletter_interests').value = selectedInterests.join(',');
+        }
+        
+        // Form submissions
+        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await submitForm(this, 'feedback', 'feedback-alert');
+        });
+        
+        document.getElementById('customerLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await loginCustomer(this);
+        });
+        
+        document.getElementById('customerRegisterForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await registerCustomer(this);
+        });
+        
+        document.getElementById('newsletterForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await submitForm(this, 'newsletter', 'newsletter-alert');
+        });
+        
+        // Customer authentication functions
+        async function loginCustomer(form) {
+            const submitBtn = form.querySelector('.btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const alert = document.getElementById('login-alert');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="loading"></div> Logging in...';
+            
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Add metadata
+                data.website_source = WEBSITE_SOURCE;
+                data.business_id = BUSINESS_ID;
+                
+                const response = await fetch(`/.netlify/functions/customer-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentCustomer = result.customer;
+                    localStorage.setItem('currentCustomer', JSON.stringify(currentCustomer));
+                    showCustomerDashboard();
+                    showAlert(alert, 'success', 'Welcome back! You have been logged in successfully.');
+                } else {
+                    showAlert(alert, 'error', result.message || 'Login failed. Please check your credentials.');
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert(alert, 'error', 'Network error. Please check your connection and try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.innerHTML = 'Login';
+            }
+        }
+        
+        async function registerCustomer(form) {
+            const submitBtn = form.querySelector('.btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const alert = document.getElementById('register-alert');
+            
+            // Validate passwords match
+            const password = form.register_password.value;
+            const confirmPassword = form.confirm_password.value;
+            
+            if (password !== confirmPassword) {
+                showAlert(alert, 'error', 'Passwords do not match.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="loading"></div> Creating account...';
+            
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Add metadata
+                data.website_source = WEBSITE_SOURCE;
+                data.business_id = BUSINESS_ID;
+                
+                const response = await fetch(`/.netlify/functions/customer-register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentCustomer = result.customer;
+                    localStorage.setItem('currentCustomer', JSON.stringify(currentCustomer));
+                    showCustomerDashboard();
+                    showAlert(alert, 'success', 'Account created successfully! Welcome to our community.');
+                } else {
+                    showAlert(alert, 'error', result.message || 'Registration failed. Please try again.');
+                }
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert(alert, 'error', 'Network error. Please check your connection and try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.innerHTML = 'Create Account';
+            }
+        }
+        
+        function showCustomerDashboard() {
+            // Hide login/register forms
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('registerForm').classList.remove('active');
+            
+            // Show dashboard
+            document.getElementById('customerDashboard').style.display = 'block';
+            document.getElementById('customerName').textContent = currentCustomer.name;
+            
+            // Load customer data
+            loadCustomerOrders();
+            loadCustomerInterests();
+            loadCustomerFeedback();
+        }
+        
+        function logoutCustomer() {
+            currentCustomer = null;
+            localStorage.removeItem('currentCustomer');
+            
+            // Hide dashboard and show login form
+            document.getElementById('customerDashboard').style.display = 'none';
+            document.getElementById('loginForm').classList.add('active');
+            
+            // Clear forms
+            document.getElementById('customerLoginForm').reset();
+            document.getElementById('customerRegisterForm').reset();
+        }
+        
+        async function loadCustomerOrders() {
+            if (!currentCustomer) return;
+            
+            try {
+                const response = await fetch(`/.netlify/functions/get-customer-orders?customer_id=${currentCustomer.id}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('customerOrders');
+                if (data.success && data.orders && data.orders.length > 0) {
+                    container.innerHTML = data.orders.map(order => `
+                        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong>Order #${order.id}</strong>
+                            <p>Status: <span style="color: #667eea;">${order.status}</span></p>
+                            <p>Date: ${new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>No orders yet. Browse our products to get started!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+        
+        async function loadCustomerInterests() {
+            if (!currentCustomer) return;
+            
+            try {
+                const response = await fetch(`/.netlify/functions/get-customer-interests?customer_id=${currentCustomer.id}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('customerInterests');
+                if (data.success && data.interests && data.interests.length > 0) {
+                    container.innerHTML = data.interests.map(interest => `
+                        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong>${interest.interested_products}</strong>
+                            <p>Budget: ${interest.budget_range || 'Not specified'}</p>
+                            <p>Timeline: ${interest.purchase_timeline || 'Not specified'}</p>
+                            <p>Date: ${new Date(interest.created_at).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Express interest in products to see them here.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading interests:', error);
+            }
+        }
+        
+        async function loadCustomerFeedback() {
+            if (!currentCustomer) return;
+            
+            try {
+                const response = await fetch(`/.netlify/functions/get-customer-feedback?customer_id=${currentCustomer.id}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('customerFeedback');
+                if (data.success && data.feedback && data.feedback.length > 0) {
+                    container.innerHTML = data.feedback.map(feedback => `
+                        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <div style="color: #ffd700;">${'★'.repeat(feedback.rating || 5)}</div>
+                            <p>${feedback.feedback_message}</p>
+                            <p style="font-size: 0.8rem; color: #666;">
+                                ${new Date(feedback.created_at).toLocaleDateString()} • ${feedback.feedback_category}
+                            </p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p>Your feedback submissions will appear here.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading feedback:', error);
+            }
+        }
+        
+        // Generic form submission
+        async function submitForm(form, type, alertId) {
+            const submitBtn = form.querySelector('.btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const alert = document.getElementById(alertId);
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="loading"></div> Submitting...';
+            
+            try {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Add metadata
+                data.website_source = WEBSITE_SOURCE;
+                data.business_id = BUSINESS_ID;
+                data.timestamp = new Date().toISOString();
+                data.type = type;
+                
+                const response = await fetch(`/.netlify/functions/submit-${type}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(alert, 'success', result.message || 'Thank you! Your submission has been received.');
+                    form.reset();
+                    
+                    // Reset form states
+                    if (type === 'feedback') {
+                        setRating(5);
+                        selectCategory(document.querySelector('.category-btn'), 'general');
+                    }
+                    if (type === 'newsletter') {
+                        selectedInterests = [];
+                        document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                    }
+                } else {
+                    showAlert(alert, 'error', result.message || 'Something went wrong. Please try again.');
+                }
+                
+            } catch (error) {
+                console.error('Submission error:', error);
+                showAlert(alert, 'error', 'Network error. Please check your connection and try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.innerHTML = type === 'feedback' ? 'Submit Feedback' : 
+                                   type === 'interest' ? 'Express Interest' : 'Subscribe Now';
+            }
+        }
+        
+        // Show alert message
+        function showAlert(alertElement, type, message) {
+            alertElement.className = `alert alert-${type}`;
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

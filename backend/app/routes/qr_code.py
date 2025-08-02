@@ -13,37 +13,55 @@ def get_qr_code_dev():
     """Development endpoint for QR code info without authentication"""
     try:
         # For development, try to get any deployed websites from the database
-        # This would normally be filtered by user_id, but for dev we'll show any
         deployed_websites = []
         
         try:
             from app import mongo
-            websites_cursor = mongo.db.child_websites.find({
-                'website_url': {'$exists': True, '$ne': None, '$ne': ''}
-            }).sort('created_at', -1).limit(10)
+            # Check multiple collections where websites might be stored
+            collections_to_check = ['child_websites', 'websites', 'deployed_sites']
             
-            for website in websites_cursor:
-                deployed_websites.append({
-                    'id': str(website.get('_id', 'unknown')),
-                    'name': website.get('website_name', 'Unnamed Website'),
-                    'url': website.get('website_url'),
-                    'platform': website.get('platform', 'unknown'),
-                    'created_at': website.get('created_at')
-                })
+            for collection_name in collections_to_check:
+                try:
+                    collection = getattr(mongo.db, collection_name)
+                    websites_cursor = collection.find({
+                        'website_url': {'$exists': True, '$ne': None, '$ne': ''}
+                    }).sort('created_at', -1).limit(5)
+                    
+                    for website in websites_cursor:
+                        deployed_websites.append({
+                            'id': str(website.get('_id', f'dev-{len(deployed_websites)}')),
+                            'name': website.get('website_name', website.get('site_name', 'Unnamed Website')),
+                            'url': website.get('website_url'),
+                            'platform': website.get('platform', 'netlify'),
+                            'created_at': website.get('created_at')
+                        })
+                except Exception as e:
+                    print(f"Could not check collection {collection_name}: {e}")
+                    continue
+                    
         except Exception as e:
-            print(f"Could not fetch websites: {e}")
-            # Fallback to sample data
+            print(f"Could not access database: {e}")
+        
+        # If no real websites found, create some sample ones for development
+        if not deployed_websites:
             deployed_websites = [
                 {
-                    'id': 'sample1',
-                    'name': 'Sample Business Website',
-                    'url': 'https://example.netlify.app',
+                    'id': 'sample-netlify-1',
+                    'name': 'My Coffee Shop',
+                    'url': 'https://my-coffee-shop-08021430.netlify.app',
                     'platform': 'netlify',
+                    'created_at': datetime.utcnow()
+                },
+                {
+                    'id': 'sample-github-1', 
+                    'name': 'Tech Startup',
+                    'url': 'https://username.github.io/tech-startup',
+                    'platform': 'github',
                     'created_at': datetime.utcnow()
                 }
             ]
         
-        # Use the first deployed website URL if available, otherwise localhost
+        # Use the first deployed website URL if available, otherwise use a sample
         default_url = 'http://localhost:3001'
         if deployed_websites and deployed_websites[0]['url']:
             default_url = deployed_websites[0]['url']

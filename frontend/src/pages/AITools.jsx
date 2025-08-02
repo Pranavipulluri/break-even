@@ -35,14 +35,19 @@ const AITools = () => {
   const generateImage = async (prompt, imageType = 'poster', style = 'modern') => {
     try {
       setLoading(true);
-      const response = await api.post('/ai-tools/generate-image', {
+      const response = await api.post('/ai-tools/dev/generate-image', {
         prompt,
         image_type: imageType,
         style
       });
       
-      setGeneratedImage(response.data.image_data);
-      toast.success('Image generated successfully!');
+      if (response.data.success) {
+        setGeneratedImage(response.data.image_data);
+        setGeneratedContent(response.data.concept || ''); // Store the AI concept
+        toast.success('Image concept generated successfully!');
+      } else {
+        toast.error(response.data.error || 'Failed to generate image');
+      }
     } catch (error) {
       toast.error('Failed to generate image');
     } finally {
@@ -202,10 +207,9 @@ const AITools = () => {
                 onChange={(e) => setImageType(e.target.value)}
                 className="input-field"
               >
-                <option value="poster">Marketing Poster</option>
-                <option value="logo">Business Logo</option>
-                <option value="product_image">Product Image</option>
-                <option value="social_media">Social Media Graphics</option>
+                <option value="poster">Business Poster</option>
+                <option value="product">Product Image</option>
+                <option value="banner">Marketing Banner</option>
               </select>
             </div>
 
@@ -218,11 +222,11 @@ const AITools = () => {
                 onChange={(e) => setStyle(e.target.value)}
                 className="input-field"
               >
-                <option value="modern">Modern</option>
-                <option value="classic">Classic</option>
-                <option value="minimalist">Minimalist</option>
-                <option value="vibrant">Vibrant</option>
                 <option value="professional">Professional</option>
+                <option value="modern">Modern</option>
+                <option value="creative">Creative</option>
+                <option value="minimal">Minimal</option>
+                <option value="vintage">Vintage</option>
               </select>
             </div>
 
@@ -257,7 +261,7 @@ const AITools = () => {
         {generatedImage && (
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Generated Image</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Generated Image Concept</h3>
               <a
                 href={generatedImage}
                 download="generated-image.png"
@@ -267,12 +271,34 @@ const AITools = () => {
                 <span>Download</span>
               </a>
             </div>
-            <div className="text-center">
-              <img
-                src={generatedImage}
-                alt="Generated"
-                className="max-w-full h-auto rounded-lg shadow-md mx-auto"
-              />
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-md font-medium text-gray-800 mb-2">Visual Mockup</h4>
+                <img
+                  src={generatedImage}
+                  alt="Generated"
+                  className="max-w-full h-auto rounded-lg shadow-md"
+                />
+              </div>
+              
+              {generatedContent && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-800 mb-2">AI Design Concept</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-700 text-sm leading-relaxed">{generatedContent}</p>
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(generatedContent)}
+                      className="btn-secondary flex items-center space-x-2 text-sm"
+                    >
+                      <Copy size={14} />
+                      <span>Copy Concept</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -52,6 +52,8 @@ def create_app(config_class=Config):
     from app.routes.website_builder import website_bp
     from app.routes.customers import customers_bp
     from app.routes.child_website import child_website_bp
+    from app.routes.public_api import public_api_bp
+    from app.routes.chatbot import chatbot_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api')
@@ -63,6 +65,8 @@ def create_app(config_class=Config):
     app.register_blueprint(website_bp, url_prefix='/api')
     app.register_blueprint(customers_bp, url_prefix='/api')
     app.register_blueprint(child_website_bp, url_prefix='/api')
+    app.register_blueprint(public_api_bp, url_prefix='/api')
+    app.register_blueprint(chatbot_bp, url_prefix='/api')
 
     # WebSocket event handlers
     @socketio.on('connect')

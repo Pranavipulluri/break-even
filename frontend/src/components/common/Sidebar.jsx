@@ -1,15 +1,14 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  MessageSquare, 
-  BarChart3, 
-  QrCode, 
-  Sparkles, 
-  Settings,
-  PlusCircle
+import {
+    BarChart3,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    PlusCircle,
+    QrCode,
+    Settings,
+    Sparkles
 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
   const navItems = [
