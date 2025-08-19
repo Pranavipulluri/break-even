@@ -6,6 +6,7 @@ from app.models.child_website import ChildWebsite
 from bson import ObjectId
 from datetime import datetime
 
+
 website_bp = Blueprint('website_builder', __name__)
 
 @website_bp.route('/website-builder/health', methods=['GET'])
@@ -366,3 +367,160 @@ def track_website_visit(website_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+
+
+@website_bp.route('/website-builder/create-enhanced', methods=['POST'])
+@jwt_required()
+def create_enhanced_website():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['website_name', 'business_type', 'color_theme', 'contact_info', 'area']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Check if user already has a website
+        existing_website = mongo.db.child_websites.find_one({
+            'owner_id': ObjectId(current_user_id)
+        })
+        
+        if existing_website:
+            return jsonify({'error': 'You already have a website. Please update your existing website.'}), 400
+        
+        # Get user context for personalization
+        user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+        user_context = {
+            'user_experience': 'new' if not user.get('has_website') else 'experienced',
+            'previous_businesses': user.get('business_history', []),
+            'preferences': user.get('preferences', {}),
+            'location': data['area']
+        }
+        
+        # Generate enhanced content using Gemini
+        gemini_service = GeminiWebsiteService()
+        generated_content = gemini_service.generate_enhanced_website_content(data, user_context)
+        
+        # Create website with enhanced content
+        website = ChildWebsite(
+            owner_id=current_user_id,
+            website_name=data['website_name'],
+            business_type=data['business_type'],
+            color_theme=data['color_theme'],
+            contact_info=data['contact_info'],
+            area=data['area'],
+            description=data.get('description', ''),
+            logo_url=data.get('logo_url'),
+            custom_css=data.get('custom_css'),
+            custom_domain=data.get('custom_domain')
+        )
+        
+        # Add enhanced content
+        website.generated_content = generated_content
+        website.generation_method = 'gemini_enhanced'
+        website.user_context = user_context
+        
+        # Insert into database
+        result = mongo.db.child_websites.insert_one({
+            **website.to_dict(),
+            'owner_id': ObjectId(current_user_id)
+        })
+        
+        # Generate website URL
+        website_url = f"{current_app.config['WEBSITE_BASE_URL']}/{current_user_id}"
+        
+        # Update user with website URL
+        mongo.db.users.update_one(
+            {'_id': ObjectId(current_user_id)},
+            {'$set': {'website_url': website_url, 'has_website': True}}
+        )
+        
+        # Store in training data
+        training_service = WebsiteTrainingService()
+        mongo.db.website_training_data.insert_one({
+            'website_id': result.inserted_id,
+            'user_id': ObjectId(current_user_id),
+            'business_type': data['business_type'],
+            'area': data['area'],
+            'business_name': data['website_name'],
+            'input_data': data,
+            'generated_content': generated_content,
+            'user_context': user_context,
+            'created_at': datetime.utcnow(),
+            'performance_score': 0.0,
+            'feedback_count': 0
+        })
+        
+        return jsonify({
+            'message': 'Enhanced website created successfully',
+            'website_id': str(result.inserted_id),
+            'website_url': website_url,
+            'generated_content': generated_content,
+            'personalization_applied': True
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@website_bp.route('/website-builder/feedback', methods=['POST'])
+@jwt_required()
+def submit_website_feedback():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        website = mongo.db.child_websites.find_one({
+            'owner_id': ObjectId(current_user_id)
+        })
+        
+        if not website:
+            return jsonify({'error': 'Website not found'}), 404
+        
+        # Collect feedback for training
+        training_service = WebsiteTrainingService()
+        training_service.collect_user_feedback(website['_id'], data)
+        
+        return jsonify({'message': 'Feedback collected successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@website_bp.route('/website-builder/recommendations/<business_type>')
+@jwt_required()
+def get_content_recommendations(business_type):
+    try:
+        current_user_id = get_jwt_identity()
+        user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+        area = request.args.get('area', user.get('area', ''))
+        
+        training_service = WebsiteTrainingService()
+        recommendations = training_service.get_content_recommendations(business_type, area)
+        
+        return jsonify({
+            'recommendations': recommendations,
+            'business_type': business_type,
+            'area': area
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@website_bp.route('/website-builder/analytics/patterns')
+@jwt_required()
+def get_successful_patterns():
+    try:
+        business_type = request.args.get('business_type')
+        
+        training_service = WebsiteTrainingService()
+        patterns = training_service.analyze_successful_patterns(business_type)
+        
+        return jsonify({
+            'patterns': patterns,
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

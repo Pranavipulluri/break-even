@@ -73,21 +73,59 @@ const WebsiteBuilder = () => {
       // Step 1: Generate AI content using development endpoint
       toast.loading('🤖 Generating AI content for your website...', { duration: 3000 });
       
-      const businessInfo = {
-        hero_title: formData.website_name || 'My Business',
-        hero_subtitle: formData.business_type ? `Professional ${formData.business_type} services` : 'Your trusted business partner',
-        about_us: `Welcome to ${formData.website_name}. We provide excellent ${formData.business_type || 'business'} services in ${formData.area || 'your area'}.`,
-        contact_cta: 'Contact us today for more information!'
-      };
-
-      // Use development endpoint that doesn't require authentication
+        // Prepare enhanced business information for better AI generation
+        const businessInfo = {
+          website_name: formData.website_name,
+          business_type: formData.business_type,
+          description: formData.description,
+          area: formData.area,
+          target_audience: formData.target_audience || 'local customers',
+          unique_selling_points: formData.unique_selling_points || '',
+          services_products: formData.services_products || '',
+          contact_info: {
+            phone: formData.phone || '',
+            email: formData.email || '',
+            address: formData.address || formData.area || ''
+          },
+          business_goals: formData.business_goals || 'grow customer base',
+          hero_title: formData.website_name,
+          hero_subtitle: formData.business_type ? `Professional ${formData.business_type} services in ${formData.area}` : 'Your trusted business partner',
+          about_us: formData.description || `Welcome to ${formData.website_name}. We provide excellent ${formData.business_type || 'business'} services in ${formData.area || 'your area'}.`,
+          contact_cta: formData.contact_cta || 'Contact us today!',
+          theme: formData.business_type,
+          color_scheme: formData.color_theme,
+          logo_url: formData.logo_url
+        };      // Use development endpoint that doesn't require authentication
       const contentResponse = await fetch('http://localhost:5000/api/ai-tools/dev/gemini-test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: `Create engaging website content for "${formData.website_name}" - a ${formData.business_type || 'business'} in ${formData.area || 'local area'}. Make it professional and appealing.`
+          prompt: `Create comprehensive, professional website content for "${formData.website_name}" - a ${formData.business_type || 'business'} in ${formData.area || 'local area'}. 
+
+BUSINESS PROFILE:
+- Business Name: ${formData.website_name}
+- Type: ${formData.business_type}
+- Location: ${formData.area}
+- Description: ${formData.description}
+- Main Products/Services: ${formData.services_products || 'various services'}
+- Target Customers: ${formData.target_audience || 'local customers'}
+- Unique Selling Points: ${formData.unique_selling_points || 'quality service'}
+- Business Goals: ${formData.business_goals || 'attract more customers'}
+- Contact: ${formData.phone || ''} ${formData.email || ''}
+- Call-to-Action: ${formData.contact_cta || 'Contact us today!'}
+
+CONTENT REQUIREMENTS:
+Generate authentic, engaging website content including:
+1. Hero Section: Compelling headline and subtitle that captures attention
+2. About Us: Professional story highlighting experience and expertise
+3. Services/Products: Clear descriptions with customer benefits
+4. Why Choose Us: Emphasize unique selling points and local presence
+5. Customer Testimonials: 2-3 realistic testimonials for this business type
+6. Contact Section: Clear contact information and call-to-action
+
+Make it sound authentic, locally-focused, and specific to small businesses in ${formData.business_type}. Use professional but approachable tone.`
         })
       });
       
@@ -317,6 +355,17 @@ const WebsiteBuilder = () => {
             <span>Basic Information</span>
           </h3>
           
+          {/* Helpful Tips for Small Business */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-blue-900 mb-2">💡 Tips for Small Business Owners</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Be specific about your services - help customers understand exactly what you offer</li>
+              <li>• Mention your location to attract local customers</li>
+              <li>• Highlight what makes you different from competitors</li>
+              <li>• Include contact information so customers can easily reach you</li>
+            </ul>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -341,9 +390,21 @@ const WebsiteBuilder = () => {
                 className="input-field"
               >
                 <option value="">Select Business Type</option>
-                {Object.entries(themes).map(([key, theme]) => (
-                  <option key={key} value={key}>{theme.name}</option>
-                ))}
+                <option value="restaurant">Restaurant/Food Service</option>
+                <option value="retail">Retail Store</option>
+                <option value="bakery">Bakery/Café</option>
+                <option value="beauty">Beauty Salon/Spa</option>
+                <option value="fitness">Fitness Center/Gym</option>
+                <option value="automotive">Auto Repair/Service</option>
+                <option value="healthcare">Healthcare/Medical</option>
+                <option value="real_estate">Real Estate</option>
+                <option value="consulting">Consulting/Professional Services</option>
+                <option value="education">Education/Training</option>
+                <option value="photography">Photography/Creative</option>
+                <option value="home_services">Home Services/Repair</option>
+                <option value="technology">Technology/IT Services</option>
+                <option value="agriculture">Agriculture/Farming</option>
+                <option value="other">Other</option>
               </select>
               {errors.business_type && (
                 <p className="text-red-500 text-sm mt-1">{errors.business_type.message}</p>
@@ -352,13 +413,53 @@ const WebsiteBuilder = () => {
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Business Description
+                Business Description *
               </label>
               <textarea
-                {...register('description')}
+                {...register('description', { required: 'Business description is required' })}
                 rows="3"
                 className="input-field"
-                placeholder="Describe your business, products, or services..."
+                placeholder="Describe your business, what you offer, and what makes you special..."
+              />
+              {errors.description && (
+                <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Main Products/Services *
+              </label>
+              <input
+                {...register('services_products', { required: 'Please list your main offerings' })}
+                className="input-field"
+                placeholder="e.g., Fresh baked goods, Custom cakes, Coffee"
+              />
+              {errors.services_products && (
+                <p className="text-red-500 text-sm mt-1">{errors.services_products.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Target Customers
+              </label>
+              <input
+                {...register('target_audience')}
+                className="input-field"
+                placeholder="e.g., Local families, Young professionals, Students"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                What Makes You Special?
+              </label>
+              <textarea
+                {...register('unique_selling_points')}
+                rows="2"
+                className="input-field"
+                placeholder="e.g., 20 years experience, Organic ingredients, 24/7 service, Award-winning..."
               />
             </div>
 
@@ -378,12 +479,86 @@ const WebsiteBuilder = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                {...register('phone')}
+                className="input-field"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                {...register('email')}
+                className="input-field"
+                placeholder="business@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Street Address
+              </label>
+              <input
+                {...register('address')}
+                className="input-field"
+                placeholder="123 Main Street"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Business Goals
+              </label>
+              <select
+                {...register('business_goals')}
+                className="input-field"
+              >
+                <option value="">Select Primary Goal</option>
+                <option value="increase_sales">Increase Sales</option>
+                <option value="attract_customers">Attract New Customers</option>
+                <option value="build_brand">Build Brand Awareness</option>
+                <option value="showcase_products">Showcase Products/Services</option>
+                <option value="improve_credibility">Improve Business Credibility</option>
+                <option value="expand_reach">Expand Geographic Reach</option>
+                <option value="customer_retention">Improve Customer Retention</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Logo URL (Optional)
               </label>
               <input
                 {...register('logo_url')}
                 className="input-field"
                 placeholder="https://example.com/logo.png"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <Settings size={20} />
+            <span>Contact & Call-to-Action</span>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Main Call-to-Action
+              </label>
+              <input
+                {...register('contact_cta')}
+                className="input-field"
+                placeholder="e.g., Call Now for Free Quote, Book Your Appointment, Order Online"
               />
             </div>
           </div>
