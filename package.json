@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "axios": "^1.12.2",
+    "qrcode": "^1.5.4",
+    "recharts": "^3.2.1"
+  }
+}
