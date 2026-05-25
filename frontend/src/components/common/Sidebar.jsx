@@ -1,23 +1,56 @@
-import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  MessageSquare, 
-  BarChart3, 
-  QrCode, 
-  Sparkles, 
-  Settings,
-  PlusCircle,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-  Zap
+import {
+    BarChart3,
+    ChevronLeft,
+    ChevronRight,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    PlusCircle,
+    QrCode,
+    Settings,
+    Sparkles,
+    Users,
+    Zap
 } from 'lucide-react';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Dynamic product name based on business type
+  const getProductsLabel = () => {
+    const businessType = user?.business_category?.toLowerCase();
+    switch (businessType) {
+      case 'legal':
+      case 'law':
+      case 'lawyer':
+      case 'attorney':
+        return 'Legal Services';
+      case 'beauty':
+      case 'salon':
+      case 'spa':
+        return 'Treatments';
+      case 'restaurant':
+      case 'food':
+      case 'cafe':
+        return 'Menu Items';
+      case 'fitness':
+      case 'gym':
+        return 'Programs';
+      case 'healthcare':
+      case 'medical':
+        return 'Services';
+      case 'education':
+      case 'training':
+        return 'Courses';
+      default:
+        return 'Products/Services';
+    }
+  };
 
   const navItems = [
     { 
@@ -30,7 +63,7 @@ const Sidebar = () => {
     { 
       to: '/products', 
       icon: Package, 
-      label: 'Products',
+      label: getProductsLabel(),
       badge: '12',
       gradient: 'from-purple-500 to-purple-600'
     },

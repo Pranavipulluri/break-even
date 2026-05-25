@@ -27,7 +27,7 @@ class GroqService:
             return current_app.config.get('GROQ_API_KEY')
         except RuntimeError:
             # Fallback when outside application context
-            return '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'
+            return os.environ.get('GROQ_API_KEY')
     
     def generate_image_description(self, prompt, business_type="", style="professional"):
         """Generate detailed image description using Groq AI"""
@@ -57,7 +57,7 @@ class GroqService:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                "model": "llama3-8b-8192",
+                "model": "llama-3.1-8b-instant",
                 "temperature": 0.7,
                 "max_tokens": 500
             }
@@ -357,7 +357,7 @@ class GroqService:
                 "messages": [
                     {"role": "user", "content": "Hello, are you working?"}
                 ],
-                "model": "llama3-8b-8192",
+                "model": "llama-3.1-8b-instant",
                 "max_tokens": 50
             }
             

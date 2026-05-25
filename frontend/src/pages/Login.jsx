@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, MapPin, Search, Shield, Sparkles, Zap } from 'lucide-react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Shield, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +35,16 @@ const Login = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex relative">
+      {/* Discover Button - Floating Action */}
+      <Link 
+        to="/discover" 
+        className="fixed top-4 right-4 z-50 bg-gradient-to-r from-primary-600 to-secondary-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center space-x-2 font-medium"
+      >
+        <Search size={16} />
+        <span className="hidden sm:inline">Discover Businesses</span>
+        <span className="sm:hidden">Discover</span>
+      </Link>
       {/* Left Side - Features */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-secondary-600"></div>
@@ -63,8 +72,25 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="space-y-6">
-            {features.map((feature, index) => (
+            <div className="space-y-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center space-x-3 mb-3">
+                  <MapPin className="text-white" size={20} />
+                  <h3 className="font-semibold text-white">Discover Local Businesses</h3>
+                </div>
+                <p className="text-white/80 text-sm mb-3">
+                  Explore businesses created with Break-even platform. Find services, restaurants, and shops near you!
+                </p>
+                <Link 
+                  to="/discover" 
+                  className="inline-flex items-center text-white bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Search size={14} className="mr-2" />
+                  Browse Now
+                </Link>
+              </div>
+              
+              {features.map((feature, index) => (
               <div key={index} className="flex items-start space-x-4 group">
                 <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl group-hover:bg-white/20 transition-colors">
                   <feature.icon size={20} />
@@ -89,6 +115,24 @@ const Login = () => {
                 <span className="text-white font-bold">B</span>
               </div>
               <h1 className="text-2xl font-bold text-gradient font-display">Break-even</h1>
+            </div>
+            
+            {/* Mobile Discover CTA */}
+            <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-xl p-4 mb-6 border border-primary-100">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <MapPin className="text-primary-600" size={18} />
+                <span className="font-semibold text-primary-700">Discover Local Businesses</span>
+              </div>
+              <p className="text-sm text-primary-600 mb-3">
+                Find amazing businesses near you
+              </p>
+              <Link 
+                to="/discover" 
+                className="btn-primary btn-sm w-full flex items-center justify-center"
+              >
+                <Search size={14} className="mr-2" />
+                Explore Now
+              </Link>
             </div>
           </div>
 

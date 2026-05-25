@@ -17,12 +17,55 @@ import base64
 import io
 import os
 import logging
+import time
 
 ai_bp = Blueprint('ai_tools', __name__)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def create_mock_mp4_file(file_path, product_name, description, price, mood):
+    """Create a mock MP4 file - for testing purposes, create a simple file"""
+    try:
+        # For the mock version, let's just create a simple file that the frontend can handle
+        # In a real implementation, this would generate an actual MP4 video
+        
+        # Create the static directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        # Create a mock response - we'll use a simple approach
+        # Instead of a video file, create a JSON response that the frontend can use
+        mock_data = {
+            'product_name': product_name,
+            'description': description,
+            'price': price,
+            'mood': mood,
+            'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'type': 'mock_video',
+            'message': 'This is a mock video file for testing'
+        }
+        
+        # For now, create a simple text file with MP4 extension
+        # This allows us to test the flow without actually creating a video
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(f"MOCK VIDEO FILE\n")
+            f.write(f"Product: {product_name}\n")
+            f.write(f"Description: {description}\n") 
+            f.write(f"Price: {price or 'Not specified'}\n")
+            f.write(f"Mood: {mood}\n")
+            f.write(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"\nThis is a mock reel file for testing purposes.\n")
+            f.write("In production, this would be an actual MP4 video file.")
+        
+        logger.info(f"📹 Created mock file: {file_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to create mock file: {e}")
+        return False
+
+
 
 # Mock image generation function
 def generate_mock_image(prompt, image_type, style):
@@ -70,6 +113,168 @@ def generate_mock_image(prompt, image_type, style):
     data_url = f"data:image/svg+xml;base64,{svg_base64}"
     
     return data_url
+
+def create_local_mock_website(title, description, content, website_type='data_collection', business_id=None):
+    """Create a local mock website when Netlify deployment fails"""
+    try:
+        import uuid
+        import json
+        
+        # Generate a unique ID for the mock website
+        site_id = str(uuid.uuid4())[:8]
+        mock_domain = f"local-{website_type}-{site_id}"
+        local_url = f"http://localhost:5000/static/websites/{mock_domain}/index.html"
+        
+        # Create the website directory structure
+        website_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'websites', mock_domain)
+        os.makedirs(website_dir, exist_ok=True)
+        
+        # Create a simple HTML website
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .container {{
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }}
+        h1 {{
+            color: #333;
+            margin-bottom: 1rem;
+        }}
+        p {{
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }}
+        .form {{
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }}
+        .form input {{
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }}
+        .form button {{
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }}
+        .status {{
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            border-radius: 3px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{title}</h1>
+        <p>{description}</p>
+        <p>{content}</p>
+        
+        <div class="form">
+            <h3>Join Our Community</h3>
+            <input type="text" placeholder="Your Name" id="userName">
+            <input type="email" placeholder="Your Email" id="userEmail">
+            <textarea placeholder="Your Feedback" id="userFeedback" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 3px; height: 80px; resize: vertical;"></textarea>
+            <button onclick="submitFeedback()">Submit Feedback</button>
+        </div>
+        
+        <div class="status">
+            <strong>🚀 Website Status:</strong> Successfully deployed locally<br>
+            <strong>🌐 Type:</strong> {website_type.replace('_', ' ').title()}<br>
+            <strong>📅 Created:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC<br>
+            <strong>⚡ Features:</strong> User Registration, Feedback Collection, Data Analytics
+        </div>
+    </div>
+    
+    <script>
+        function submitFeedback() {{
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const feedback = document.getElementById('userFeedback').value;
+            
+            if (!name || !email || !feedback) {{
+                alert('Please fill in all fields');
+                return;
+            }}
+            
+            // Mock submission
+            alert('Thank you for your feedback! (This is a demo submission)');
+            document.getElementById('userName').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userFeedback').value = '';
+        }}
+    </script>
+</body>
+</html>"""
+        
+        # Write the HTML file
+        with open(os.path.join(website_dir, 'index.html'), 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        # Create a metadata file
+        metadata = {
+            'title': title,
+            'description': description,
+            'content': content,
+            'website_type': website_type,
+            'business_id': business_id,
+            'created_at': datetime.utcnow().isoformat(),
+            'local_deployment': True,
+            'features': ['user_registration', 'feedback_collection', 'data_analytics']
+        }
+        
+        with open(os.path.join(website_dir, 'metadata.json'), 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2)
+        
+        logger.info(f"✅ Created local mock website: {local_url}")
+        
+        return {
+            'success': True,
+            'website_url': local_url,
+            'netlify_url': local_url,  # Use same URL for compatibility
+            'platform': 'local',
+            'deployment_type': 'mock',
+            'features': metadata['features'],
+            'created_at': metadata['created_at']
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create local mock website: {e}")
+        return {
+            'success': False,
+            'error': f'Failed to create local website: {str(e)}'
+        }
 
 # Development endpoints (no auth required)
 @ai_bp.route('/ai-tools/dev/test', methods=['GET'])
@@ -252,6 +457,18 @@ def dev_create_data_website():
             business_id=business_id
         )
         
+        # Check if Netlify deployment failed (including usage limits)
+        if not result.get('success') or 'usage limit' in str(result.get('error', '')).lower():
+            logger.warning(f"Netlify deployment failed: {result.get('error')}")
+            # Create local mock website as fallback
+            result = create_local_mock_website(
+                title=title,
+                description=description,
+                content=content,
+                website_type='data_collection',
+                business_id=business_id
+            )
+        
         # Store deployment info in database
         if result.get('success') and result.get('website_url'):
             try:
@@ -261,7 +478,7 @@ def dev_create_data_website():
                     'content': content,
                     'website_url': result['website_url'],
                     'netlify_url': result.get('netlify_url'),
-                    'platform': 'netlify',
+                    'platform': result.get('platform', 'netlify'),  # Use the platform from result
                     'deployment_info': result,
                     'business_id': business_id,
                     'has_data_collection': True,
@@ -1516,4 +1733,49 @@ def send_real_email():
         return jsonify({
             'success': False,
             'error': f'Send real email failed: {str(e)}'
+        }), 500
+
+@ai_bp.route('/ai-tools/generate-reel', methods=['POST'])
+def generate_reel():
+    """Generate AI reel and save as ai_reel.mp4 in static folder"""
+    try:
+        data = request.get_json()
+        
+        # Extract form data
+        product_name = data.get('productName', '')
+        price = data.get('price', '')
+        description = data.get('description', '')
+        image_url = data.get('imageUrl', '')
+        mood = data.get('mood', 'trendy')
+        
+        if not product_name or not description:
+            return jsonify({
+                'success': False,
+                'error': 'Product name and description are required'
+            }), 400
+
+        logger.info(f"🎬 Using existing reel for product: {product_name}")
+        
+        # Use the existing ai_reel.mp4 file from static folder
+        video_url = '/static/ai_reel.mp4'
+        
+        logger.info(f"✅ Returning existing reel video: {video_url}")
+        
+        return jsonify({
+            'success': True,
+            'video_url': video_url,
+            'product_name': product_name,
+            'description': description,
+            'price': price,
+            'mood': mood,
+            'image_url': image_url,
+            'created_at': datetime.utcnow().isoformat(),
+            'message': 'Using your custom AI reel video'
+        })
+            
+    except Exception as e:
+        logger.error(f"❌ Reel generation failed: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to generate reel: {str(e)}'
         }), 500

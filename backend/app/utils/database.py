@@ -42,6 +42,12 @@ def init_database():
         mongo.db.ai_image_generations.create_index([("user_id", 1), ("created_at", -1)])
         mongo.db.ai_suggestions.create_index([("user_id", 1), ("created_at", -1)])
         
+        # MCP & Copilot collections
+        mongo.db.website_schemas.create_index([("business_id", 1), ("is_active", 1)])
+        mongo.db.website_history.create_index([("business_id", 1), ("timestamp", -1)])
+        mongo.db.business_memory.create_index("business_id")
+        mongo.db.pending_patches.create_index([("business_id", 1), ("is_applied", 1)])
+        
         # Feedback collection
         mongo.db.customer_feedback.create_index([("business_owner_id", 1), ("created_at", -1)])
         mongo.db.customer_feedback.create_index("rating")

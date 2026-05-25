@@ -13,7 +13,7 @@ mail = Mail()
 socketio = SocketIO()
 
 def create_app(config_class=Config):
-    app = Flask(__name__)  # ✅ fixed here
+    app = Flask(__name__, static_folder='../static', static_url_path='/static')
     app.config.from_object(config_class)
     
     # Initialize extensions with app
@@ -54,6 +54,15 @@ def create_app(config_class=Config):
     from app.routes.child_website import child_website_bp
     from app.routes.public_api import public_api_bp
     from app.routes.chatbot import chatbot_bp
+    from app.routes.bookings import bookings_bp
+    from app.routes.bookings_routes import bookings_routes_bp
+    from app.routes.orders import orders_bp
+    from app.routes.law_firm_routes import law_firm_bp, init_law_firm_routes
+    from app.routes.beauty_salon_routes import beauty_salon_bp, init_beauty_salon_routes
+    from app.routes.translation_routes import translation_bp
+    from app.routes.ai_chatbot_routes import ai_chatbot_bp
+    from app.routes.consultation_routes import consultation_bp
+    from app.routes.agent_routes import agent_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api')
@@ -67,6 +76,21 @@ def create_app(config_class=Config):
     app.register_blueprint(child_website_bp, url_prefix='/api')
     app.register_blueprint(public_api_bp, url_prefix='/api')
     app.register_blueprint(chatbot_bp, url_prefix='/api')
+    app.register_blueprint(bookings_bp, url_prefix='/api')
+    app.register_blueprint(bookings_routes_bp, url_prefix='/api')
+    app.register_blueprint(orders_bp, url_prefix='/api')
+    app.register_blueprint(law_firm_bp, url_prefix='/api')
+    app.register_blueprint(beauty_salon_bp)  # Beauty salon routes with custom prefix
+    app.register_blueprint(translation_bp, url_prefix='/api')  # Translation routes with prefix
+    app.register_blueprint(ai_chatbot_bp)  # AI chatbot routes
+    app.register_blueprint(consultation_bp, url_prefix='/api')  # Consultation routes
+    app.register_blueprint(agent_bp, url_prefix='/api')  # AI Agent Copilot routes
+    
+    # Initialize law firm integration service with socketio and mongo client
+    init_law_firm_routes(socketio, mongo.cx)
+    
+    # Initialize beauty salon integration service with socketio and mongo client
+    init_beauty_salon_routes(socketio, mongo.cx)
 
     # WebSocket event handlers
     @socketio.on('connect')
@@ -83,6 +107,14 @@ def create_app(config_class=Config):
         join_room(user_id)
         print(f'User {user_id} joined their room')
         emit('joined_room', {'room': user_id})
+
+    @socketio.on('join_agent_room')
+    def handle_join_agent_room(data):
+        """Frontend copilot drawer joins the business room to receive agent thought streams."""
+        business_id = data.get('business_id') if isinstance(data, dict) else data
+        join_room(str(business_id))
+        print(f'Agent room joined for business: {business_id}')
+        emit('agent_room_joined', {'business_id': str(business_id)})
 
     @socketio.on('leave_room')
     def handle_leave_room(user_id):

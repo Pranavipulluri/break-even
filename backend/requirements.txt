@@ -9,8 +9,11 @@ Flask-Caching==2.1.0
 python-socketio==5.8.0
 Werkzeug==2.3.6
 
+# MCP (Model Context Protocol) Server SDK
+mcp[cli]>=1.0.0
+
 # Database
-pymongo==4.4.1
+pymongo>=4.8.0
 redis==4.6.0
 
 # Environment & Configuration
@@ -18,30 +21,31 @@ python-dotenv==1.0.0
 python-decouple==3.8
 
 # Image Processing & AI
-Pillow==10.0.0
+Pillow>=10.2.0
 requests==2.31.0
+moviepy==1.0.3
 
 # Authentication & Security
-bcrypt==4.0.1
-PyJWT==2.8.0
-cryptography==41.0.3
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+cryptography>=42.0.0
 
 # Image Processing & QR Codes
 qrcode[pil]==7.4.2
-Pillow==10.0.0
+Pillow>=10.2.0
 python-magic==0.4.27
 
 # HTTP Requests
 requests==2.31.0
-urllib3==2.0.4
+urllib3>=1.26.0
 
 # Google Gemini AI - ONLY AI DEPENDENCY
-google-generativeai==0.3.2
-google-auth==2.23.0
-google-auth-oauthlib==1.0.0
-google-auth-httplib2==0.1.0
-google-api-core==2.11.1
-google-api-python-client==2.100.0
+google-generativeai>=0.3.2
+google-auth>=2.23.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.0
+google-api-core>=2.11.1
+google-api-python-client>=2.100.0
 
 # Natural Language Processing
 textblob==0.17.1
@@ -49,8 +53,8 @@ nltk==3.8.1
 langdetect==1.0.9
 
 # Data Processing
-pandas==2.0.3
-numpy==1.24.3
+pandas>=2.2.0
+numpy>=1.26.0
 
 # Date & Time
 python-dateutil==2.8.2
@@ -81,9 +85,9 @@ factory-boy==3.3.0
 faker==19.3.0
 
 # Production Server
-gunicorn==21.2.0
-gevent==23.7.0
-eventlet==0.33.3
+gunicorn>=22.0.0
+gevent>=24.2.1
+eventlet>=0.36.0
 
 # Utilities
 click==8.1.6
@@ -103,11 +107,11 @@ marshmallow==3.20.1
 APScheduler==3.10.4
 
 # SSL/TLS Support
-pyOpenSSL==23.2.0
+pyOpenSSL>=23.2.0
 
 # Compression
-brotli==1.0.9
-zstandard==0.21.0
+Brotli>=1.1.0
+zstandard>=0.23.0
 
 # Memory Optimization
-psutil==5.9.5
+psutil>=5.9.8

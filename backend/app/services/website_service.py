@@ -100,7 +100,8 @@ class WebsiteService:
             'health': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
             'technology': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
             'automotive': 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-            'education': 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
+            'education': 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+            'lawfirm': 'linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%)'
         }
         return styles.get(business_type.lower(), 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)')
     
@@ -114,7 +115,8 @@ class WebsiteService:
             'health': ['Qualified Professionals', 'Modern Equipment', 'Personalized Care', 'Health Focused'],
             'technology': ['Cutting-edge Solutions', 'Expert Team', 'Innovation Driven', 'Reliable Support'],
             'automotive': ['Certified Technicians', 'Quality Parts', 'Fast Service', 'Fair Pricing'],
-            'education': ['Experienced Teachers', 'Proven Methods', 'Student Success', 'Supportive Environment']
+            'education': ['Experienced Teachers', 'Proven Methods', 'Student Success', 'Supportive Environment'],
+            'lawfirm': ['Licensed Attorneys', 'Proven Track Record', 'Client Advocacy', 'Legal Expertise']
         }
         return highlights.get(business_type.lower(), ['Quality Service', 'Professional Team', 'Customer Satisfaction', 'Reliable Results'])
     
@@ -140,6 +142,12 @@ class WebsiteService:
                 {'name': 'Consultation', 'description': 'Professional advice tailored to your needs'},
                 {'name': 'Service Delivery', 'description': 'High-quality service execution'},
                 {'name': 'Follow-up Support', 'description': 'Ongoing support to ensure satisfaction'}
+            ],
+            'lawfirm': [
+                {'name': 'Legal Consultation', 'description': 'Free initial consultation to discuss your case'},
+                {'name': 'Case Evaluation', 'description': 'Comprehensive review of your legal situation'},
+                {'name': 'Legal Representation', 'description': 'Dedicated advocacy in court and negotiations'},
+                {'name': 'Document Preparation', 'description': 'Professional legal document drafting and review'}
             ]
         }
         return services.get(business_type.lower(), [
