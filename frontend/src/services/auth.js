@@ -26,5 +26,15 @@ export const authService = {
   resetPassword: async (token, newPassword) => {
     const response = await api.post('/auth/reset-password', { token, newPassword });
     return response.data;
+  },
+
+  googleLogin: async (idToken) => {
+    const response = await api.post('/auth/google', { id_token: idToken });
+    return response.data;
+  },
+
+  microsoftLogin: async (accessToken) => {
+    const response = await api.post('/auth/microsoft', { access_token: accessToken });
+    return response.data;
   }
 };
