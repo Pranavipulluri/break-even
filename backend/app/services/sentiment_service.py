@@ -5,7 +5,7 @@ import json
 
 class SentimentService:
     def __init__(self, api_key=None):
-        self.api_key = api_key or current_app.config.get("AIzaSyD25Qkutz-mjpOz8ELQVWmocw0hBoFAG2A")
+        self.api_key = api_key or current_app.config.get("GEMINI_API_KEY")
         if self.api_key:
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel("gemini-pro")
@@ -13,7 +13,7 @@ class SentimentService:
     def analyze_sentiment(self, text):
         if not text.strip():
             return {
-                "label": "neutral",
+                "sentiment": "neutral",
                 "score": 0.0,
                 "confidence": 0.0,
                 "method": "empty_text"
@@ -23,7 +23,7 @@ class SentimentService:
             if self.api_key:
                 prompt = (
                     "Analyze the sentiment of this text and respond ONLY in JSON format like this:\n"
-                    '{ "label": "positive", "score": 0.8, "confidence": 0.9 }\n'
+                    '{ "sentiment": "positive", "score": 0.8, "confidence": 0.9 }\n'
                     f'Text: "{text}"'
                 )
                 response = self.model.generate_content(prompt)
@@ -40,11 +40,11 @@ class SentimentService:
         # Fallback to TextBlob
         blob = TextBlob(text)
         polarity = blob.sentiment.polarity
-        label = "positive" if polarity > 0 else "negative" if polarity < 0 else "neutral"
+        sentiment = "positive" if polarity > 0 else "negative" if polarity < 0 else "neutral"
 
         return {
-            "label": label,
+            "sentiment": sentiment,
             "score": polarity,
-            "confidence": 1.0,
+            "confidence": abs(polarity),
             "method": "textblob"
         }

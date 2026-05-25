@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{BUSINESS_NAME}} - {{BUSINESS_TYPE}} in {{LOCATION}}</title>
+    <meta name="description" content="{{SEO_DESCRIPTION}}">
+    <meta name="keywords" content="{{SEO_KEYWORDS}}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{BUSINESS_NAME}} - {{BUSINESS_TYPE}}">
+    <meta property="og:description" content="{{SEO_DESCRIPTION}}">
+    <meta property="og:image" content="{{LOGO_URL}}">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="{{BUSINESS_NAME}} - {{BUSINESS_TYPE}}">
+    <meta property="twitter:description" content="{{SEO_DESCRIPTION}}">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '{{PRIMARY_COLOR}}',
+                        secondary: '{{SECONDARY_COLOR}}',
+                        accent: '{{ACCENT_COLOR}}'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom styles for enhanced visuals */
+        .gradient-bg {
+            background: linear-gradient(135deg, {{PRIMARY_COLOR}} 0%, {{SECONDARY_COLOR}} 100%);
+        }
+        
+        .hero-pattern {
+            background-image: 
+                radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
+                radial-gradient(circle at 75px 75px, rgba(255,255,255,0.1) 2px, transparent 0);
+            background-size: 100px 100px;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg fixed w-full top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    {{#if LOGO_URL}}
+                    <img src="{{LOGO_URL}}" alt="{{BUSINESS_NAME}} Logo" class="h-10 w-10 rounded-lg">
+                    {{else}}
+                    <div class="h-10 w-10 gradient-bg rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">{{BUSINESS_INITIAL}}</span>
+                    </div>
+                    {{/if}}
+                    <span class="text-xl font-bold text-gray-800">{{BUSINESS_NAME}}</span>
+                </div>
+                
+                <div class="hidden md:flex space-x-6">
+                    <a href="#home" class="text-gray-600 hover:text-primary transition">Home</a>
+                    <a href="#about" class="text-gray-600 hover:text-primary transition">About</a>
+                    <a href="#services" class="text-gray-600 hover:text-primary transition">{{SERVICES_LABEL}}</a>
+                    <a href="#contact" class="text-gray-600 hover:text-primary transition">Contact</a>
+                    {{#if BOOKING_ENABLED}}
+                    <a href="#booking" class="text-gray-600 hover:text-primary transition">{{BOOKING_LABEL}}</a>
+                    {{/if}}
+                </div>
+                
+                <div class="flex space-x-3">
+                    {{#if PHONE_NUMBER}}
+                    <a href="tel:{{PHONE_NUMBER}}" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90 transition">
+                        <i class="fas fa-phone mr-2"></i>Call Now
+                    </a>
+                    {{/if}}
+                    <button id="mobile-menu-btn" class="md:hidden text-gray-600">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="md:hidden hidden pb-4">
+                <a href="#home" class="block py-2 text-gray-600">Home</a>
+                <a href="#about" class="block py-2 text-gray-600">About</a>
+                <a href="#services" class="block py-2 text-gray-600">{{SERVICES_LABEL}}</a>
+                <a href="#contact" class="block py-2 text-gray-600">Contact</a>
+                {{#if BOOKING_ENABLED}}
+                <a href="#booking" class="block py-2 text-gray-600">{{BOOKING_LABEL}}</a>
+                {{/if}}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="gradient-bg hero-pattern pt-20 min-h-screen flex items-center">
+        <div class="container mx-auto px-4">
+            <div class="text-center text-white">
+                <div class="animate-fade-in">
+                    <h1 class="text-5xl md:text-7xl font-bold mb-6">{{HERO_HEADLINE}}</h1>
+                    <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">{{HERO_TAGLINE}}</p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <button onclick="handleMainCTA()" class="bg-white text-primary px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition shadow-lg">
+                            <i class="{{CTA_ICON}} mr-2"></i>{{MAIN_CTA}}
+                        </button>
+                        
+                        {{#if SECONDARY_CTA}}
+                        <button onclick="handleSecondaryCTA()" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-primary transition">
+                            {{SECONDARY_CTA}}
+                        </button>
+                        {{/if}}
+                    </div>
+                </div>
+                
+                <!-- Floating Elements -->
+                <div class="absolute top-1/4 left-10 hidden lg:block">
+                    <div class="w-4 h-4 bg-white rounded-full pulse-dot"></div>
+                </div>
+                <div class="absolute top-1/3 right-20 hidden lg:block">
+                    <div class="w-6 h-6 border-2 border-white rounded-full pulse-dot" style="animation-delay: 0.5s;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">About {{BUSINESS_NAME}}</h2>
+                <div class="w-20 h-1 gradient-bg mx-auto"></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6">{{ABOUT_HEADLINE}}</h3>
+                    <p class="text-gray-600 text-lg leading-relaxed mb-6">{{ABOUT_DESCRIPTION}}</p>
+                    
+                    <div class="space-y-4">
+                        {{#each SPECIAL_FEATURES}}
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 gradient-bg rounded-full"></div>
+                            <span class="text-gray-700">{{this}}</span>
+                        </div>
+                        {{/each}}
+                    </div>
+                    
+                    {{#if YEARS_EXPERIENCE}}
+                    <div class="mt-8 p-6 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-4">
+                            <div class="text-4xl font-bold text-primary">{{YEARS_EXPERIENCE}}+</div>
+                            <div class="text-gray-600">Years of Excellence in {{BUSINESS_TYPE}}</div>
+                        </div>
+                    </div>
+                    {{/if}}
+                </div>
+                
+                <div class="relative">
+                    <img src="{{ABOUT_IMAGE}}" alt="About {{BUSINESS_NAME}}" class="rounded-lg shadow-2xl w-full">
+                    {{#if BUSINESS_HOURS}}
+                    <div class="absolute -bottom-6 left-6 bg-white p-4 rounded-lg shadow-lg">
+                        <h4 class="font-semibold text-gray-800 mb-2">Business Hours</h4>
+                        <p class="text-gray-600 text-sm">{{BUSINESS_HOURS}}</p>
+                    </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services/Products Section -->
+    <section id="services" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Our {{SERVICES_LABEL}}</h2>
+                <p class="text-gray-600 text-lg max-w-2xl mx-auto">{{SERVICES_DESCRIPTION}}</p>
+                <div class="w-20 h-1 gradient-bg mx-auto mt-4"></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {{#each SERVICES}}
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden card-hover">
+                    <div class="relative h-48">
+                        <img src="{{this.image}}" alt="{{this.name}}" class="w-full h-full object-cover">
+                        {{#if this.badge}}
+                        <div class="absolute top-4 right-4 bg-primary text-white px-3 py-1 rounded-full text-sm">
+                            {{this.badge}}
+                        </div>
+                        {{/if}}
+                    </div>
+                    
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">{{this.name}}</h3>
+                        <p class="text-gray-600 mb-4">{{this.description}}</p>
+                        
+                        {{#if this.price}}
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-2xl font-bold text-primary">{{this.price}}</span>
+                            {{#if this.originalPrice}}
+                            <span class="text-gray-400 line-through">{{this.originalPrice}}</span>
+                            {{/if}}
+                        </div>
+                        {{/if}}
+                        
+                        <button onclick="handleServiceAction('{{this.id}}')" class="w-full gradient-bg text-white py-3 rounded-lg hover:opacity-90 transition">
+                            {{this.actionText}}
+                        </button>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose Us Section -->
+    <section class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Why Choose {{BUSINESS_NAME}}?</h2>
+                <div class="w-20 h-1 gradient-bg mx-auto"></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {{#each WHY_CHOOSE_US}}
+                <div class="text-center">
+                    <div class="w-16 h-16 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="{{this.icon}} text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">{{this.title}}</h3>
+                    <p class="text-gray-600">{{this.description}}</p>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">What Our Customers Say</h2>
+                <div class="w-20 h-1 gradient-bg mx-auto"></div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {{#each TESTIMONIALS}}
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <div class="flex items-center mb-4">
+                        {{#repeat this.rating}}
+                        <i class="fas fa-star text-yellow-400"></i>
+                        {{/repeat}}
+                    </div>
+                    <p class="text-gray-600 mb-4 italic">"{{this.text}}"</p>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-gray-600 font-semibold">{{this.initial}}</span>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800">{{this.name}}</div>
+                            <div class="text-gray-500 text-sm">{{this.title}}</div>
+                        </div>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </div>
+    </section>
+
+    {{#if BOOKING_ENABLED}}
+    <!-- Booking Section -->
+    <section id="booking" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">{{BOOKING_HEADLINE}}</h2>
+                <p class="text-gray-600 text-lg">{{BOOKING_DESCRIPTION}}</p>
+                <div class="w-20 h-1 gradient-bg mx-auto mt-4"></div>
+            </div>
+            
+            <div class="max-w-2xl mx-auto">
+                <form id="booking-form" class="bg-gray-50 p-8 rounded-lg">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Full Name *</label>
+                            <input type="text" id="booking-name" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Phone Number *</label>
+                            <input type="tel" id="booking-phone" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Email Address *</label>
+                            <input type="email" id="booking-email" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">{{BOOKING_SERVICE_LABEL}} *</label>
+                            <select id="booking-service" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                                <option value="">Select {{BOOKING_SERVICE_LABEL}}</option>
+                                {{#each BOOKING_OPTIONS}}
+                                <option value="{{this.value}}">{{this.label}}</option>
+                                {{/each}}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Preferred Date</label>
+                            <input type="date" id="booking-date" class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Preferred Time</label>
+                            <select id="booking-time" class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                                <option value="">Select Time</option>
+                                {{#each AVAILABLE_TIMES}}
+                                <option value="{{this}}">{{this}}</option>
+                                {{/each}}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label class="block text-gray-700 font-semibold mb-2">Additional Notes</label>
+                        <textarea id="booking-notes" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none" placeholder="Any specific requirements or questions?"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full gradient-bg text-white py-4 rounded-lg text-lg font-semibold hover:opacity-90 transition mt-6">
+                        <i class="fas fa-calendar-check mr-2"></i>{{BOOKING_BUTTON_TEXT}}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+    {{/if}}
+
+    <!-- Newsletter Section -->
+    <section class="py-20 gradient-bg hero-pattern">
+        <div class="container mx-auto px-4 text-center text-white">
+            <h2 class="text-4xl font-bold mb-4">Stay Connected</h2>
+            <p class="text-xl mb-8 opacity-90">Get updates, special offers, and news from {{BUSINESS_NAME}}</p>
+            
+            <form id="newsletter-form" class="max-w-md mx-auto">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="email" id="newsletter-email" placeholder="Enter your email" required class="flex-1 p-4 rounded-lg text-gray-800 focus:outline-none">
+                    <button type="submit" class="bg-white text-primary px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition">
+                        Subscribe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Get In Touch</h2>
+                <p class="text-gray-600 text-lg">{{CONTACT_DESCRIPTION}}</p>
+                <div class="w-20 h-1 gradient-bg mx-auto mt-4"></div>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-12">
+                <!-- Contact Information -->
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6">Contact Information</h3>
+                    
+                    <div class="space-y-6">
+                        {{#if PHONE_NUMBER}}
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center">
+                                <i class="fas fa-phone text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-800">Phone</div>
+                                <a href="tel:{{PHONE_NUMBER}}" class="text-primary hover:underline">{{PHONE_NUMBER}}</a>
+                            </div>
+                        </div>
+                        {{/if}}
+                        
+                        {{#if EMAIL_ADDRESS}}
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center">
+                                <i class="fas fa-envelope text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-800">Email</div>
+                                <a href="mailto:{{EMAIL_ADDRESS}}" class="text-primary hover:underline">{{EMAIL_ADDRESS}}</a>
+                            </div>
+                        </div>
+                        {{/if}}
+                        
+                        {{#if STREET_ADDRESS}}
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center">
+                                <i class="fas fa-map-marker-alt text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-800">Address</div>
+                                <a href="https://maps.google.com?q={{STREET_ADDRESS}}" target="_blank" class="text-primary hover:underline">{{STREET_ADDRESS}}</a>
+                            </div>
+                        </div>
+                        {{/if}}
+                        
+                        {{#if BUSINESS_HOURS}}
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center">
+                                <i class="fas fa-clock text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-gray-800">Hours</div>
+                                <div class="text-gray-600">{{BUSINESS_HOURS}}</div>
+                            </div>
+                        </div>
+                        {{/if}}
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mt-8 grid grid-cols-2 gap-4">
+                        {{#if PHONE_NUMBER}}
+                        <a href="tel:{{PHONE_NUMBER}}" class="gradient-bg text-white p-4 rounded-lg text-center hover:opacity-90 transition">
+                            <i class="fas fa-phone-alt mb-2"></i>
+                            <div class="font-semibold">Call Now</div>
+                        </a>
+                        {{/if}}
+                        
+                        {{#if WHATSAPP_NUMBER}}
+                        <a href="https://wa.me/{{WHATSAPP_NUMBER}}" target="_blank" class="bg-green-500 text-white p-4 rounded-lg text-center hover:bg-green-600 transition">
+                            <i class="fab fa-whatsapp mb-2"></i>
+                            <div class="font-semibold">WhatsApp</div>
+                        </a>
+                        {{/if}}
+                        
+                        {{#if STREET_ADDRESS}}
+                        <a href="https://maps.google.com?q={{STREET_ADDRESS}}" target="_blank" class="bg-blue-500 text-white p-4 rounded-lg text-center hover:bg-blue-600 transition">
+                            <i class="fas fa-directions mb-2"></i>
+                            <div class="font-semibold">Directions</div>
+                        </a>
+                        {{/if}}
+                        
+                        <button onclick="showContactForm()" class="bg-gray-600 text-white p-4 rounded-lg text-center hover:bg-gray-700 transition">
+                            <i class="fas fa-envelope mb-2"></i>
+                            <div class="font-semibold">Message</div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Contact Form -->
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-6">Send us a Message</h3>
+                    
+                    <form id="contact-form" class="space-y-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2">Name *</label>
+                                <input type="text" id="contact-name" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2">Phone</label>
+                                <input type="tel" id="contact-phone" class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Email *</label>
+                            <input type="email" id="contact-email" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Subject</label>
+                            <input type="text" id="contact-subject" class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Message *</label>
+                            <textarea id="contact-message" rows="5" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-primary focus:outline-none"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="w-full gradient-bg text-white py-4 rounded-lg text-lg font-semibold hover:opacity-90 transition">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <!-- Business Info -->
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        {{#if LOGO_URL}}
+                        <img src="{{LOGO_URL}}" alt="{{BUSINESS_NAME}} Logo" class="h-10 w-10 rounded-lg">
+                        {{else}}
+                        <div class="h-10 w-10 gradient-bg rounded-lg flex items-center justify-center">
+                            <span class="text-white font-bold text-lg">{{BUSINESS_INITIAL}}</span>
+                        </div>
+                        {{/if}}
+                        <span class="text-xl font-bold">{{BUSINESS_NAME}}</span>
+                    </div>
+                    <p class="text-gray-300 mb-4">{{FOOTER_DESCRIPTION}}</p>
+                    
+                    <!-- Social Links -->
+                    <div class="flex space-x-4">
+                        {{#each SOCIAL_LINKS}}
+                        <a href="{{this.url}}" target="_blank" class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-primary transition">
+                            <i class="{{this.icon}}"></i>
+                        </a>
+                        {{/each}}
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#home" class="text-gray-300 hover:text-white transition">Home</a></li>
+                        <li><a href="#about" class="text-gray-300 hover:text-white transition">About</a></li>
+                        <li><a href="#services" class="text-gray-300 hover:text-white transition">{{SERVICES_LABEL}}</a></li>
+                        <li><a href="#contact" class="text-gray-300 hover:text-white transition">Contact</a></li>
+                        {{#if BOOKING_ENABLED}}
+                        <li><a href="#booking" class="text-gray-300 hover:text-white transition">{{BOOKING_LABEL}}</a></li>
+                        {{/if}}
+                    </ul>
+                </div>
+                
+                <!-- Services -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">{{SERVICES_LABEL}}</h3>
+                    <ul class="space-y-2">
+                        {{#each FOOTER_SERVICES}}
+                        <li><a href="#" class="text-gray-300 hover:text-white transition">{{this}}</a></li>
+                        {{/each}}
+                    </ul>
+                </div>
+                
+                <!-- Contact Info -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Contact Info</h3>
+                    <div class="space-y-3">
+                        {{#if PHONE_NUMBER}}
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-phone text-primary"></i>
+                            <span class="text-gray-300">{{PHONE_NUMBER}}</span>
+                        </div>
+                        {{/if}}
+                        
+                        {{#if EMAIL_ADDRESS}}
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-envelope text-primary"></i>
+                            <span class="text-gray-300">{{EMAIL_ADDRESS}}</span>
+                        </div>
+                        {{/if}}
+                        
+                        {{#if STREET_ADDRESS}}
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-map-marker-alt text-primary"></i>
+                            <span class="text-gray-300">{{STREET_ADDRESS}}</span>
+                        </div>
+                        {{/if}}
+                    </div>
+                    
+                    <!-- QR Code -->
+                    <div class="mt-6">
+                        <div class="bg-white p-3 rounded-lg inline-block">
+                            <div id="qr-code" class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
+                                <i class="fas fa-qrcode text-gray-400 text-2xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2">Scan to visit our website</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+                <p class="text-gray-300">
+                    © {{CURRENT_YEAR}} {{BUSINESS_NAME}}. All rights reserved. 
+                    {{#if WEBSITE_URL}}
+                    | Website powered by <a href="{{MAIN_WEBSITE_URL}}" target="_blank" class="text-primary hover:underline">Break-Even Platform</a>
+                    {{/if}}
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Fixed Action Button -->
+    <div class="fixed bottom-6 right-6 z-50">
+        {{#if PHONE_NUMBER}}
+        <a href="tel:{{PHONE_NUMBER}}" class="gradient-bg text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:opacity-90 transition pulse-dot">
+            <i class="fas fa-phone text-xl"></i>
+        </a>
+        {{/if}}
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Configuration
+        const CONFIG = {
+            businessId: '{{BUSINESS_ID}}',
+            apiEndpoint: '{{API_ENDPOINT}}',
+            mainWebsiteUrl: '{{MAIN_WEBSITE_URL}}'
+        };
+
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Form handlers
+        function handleMainCTA() {
+            // Track CTA click
+            trackEvent('cta_clicked', { type: 'main', text: '{{MAIN_CTA}}' });
+            
+            {{#if CTA_ACTION}}
+            {{CTA_ACTION}}
+            {{else}}
+            document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+            {{/if}}
+        }
+
+        function handleSecondaryCTA() {
+            trackEvent('cta_clicked', { type: 'secondary', text: '{{SECONDARY_CTA}}' });
+            {{#if SECONDARY_CTA_ACTION}}
+            {{SECONDARY_CTA_ACTION}}
+            {{else}}
+            document.getElementById('services').scrollIntoView({ behavior: 'smooth' });
+            {{/if}}
+        }
+
+        function handleServiceAction(serviceId) {
+            trackEvent('service_clicked', { serviceId });
+            // Custom service action or redirect to booking
+            {{#if BOOKING_ENABLED}}
+            document.getElementById('booking').scrollIntoView({ behavior: 'smooth' });
+            {{else}}
+            showContactForm();
+            {{/if}}
+        }
+
+        function showContactForm() {
+            document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('contact-name').focus();
+        }
+
+        // Contact form submission
+        document.getElementById('contact-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                type: 'contact',
+                businessId: CONFIG.businessId,
+                name: document.getElementById('contact-name').value,
+                email: document.getElementById('contact-email').value,
+                phone: document.getElementById('contact-phone').value,
+                subject: document.getElementById('contact-subject').value,
+                message: document.getElementById('contact-message').value,
+                timestamp: new Date().toISOString(),
+                source: 'mini-website'
+            };
+
+            try {
+                const response = await fetch(`${CONFIG.apiEndpoint}/api/public/submit-contact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showNotification('Message sent successfully! We\'ll get back to you soon.', 'success');
+                    this.reset();
+                    trackEvent('contact_submitted', formData);
+                } else {
+                    throw new Error('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error submitting contact form:', error);
+                showNotification('Sorry, there was an error sending your message. Please try again.', 'error');
+            }
+        });
+
+        {{#if BOOKING_ENABLED}}
+        // Booking form submission
+        document.getElementById('booking-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                type: 'booking',
+                businessId: CONFIG.businessId,
+                name: document.getElementById('booking-name').value,
+                email: document.getElementById('booking-email').value,
+                phone: document.getElementById('booking-phone').value,
+                service: document.getElementById('booking-service').value,
+                date: document.getElementById('booking-date').value,
+                time: document.getElementById('booking-time').value,
+                notes: document.getElementById('booking-notes').value,
+                timestamp: new Date().toISOString(),
+                source: 'mini-website'
+            };
+
+            try {
+                const response = await fetch(`${CONFIG.apiEndpoint}/api/public/submit-booking`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showNotification('Booking request submitted! We\'ll confirm your appointment soon.', 'success');
+                    this.reset();
+                    trackEvent('booking_submitted', formData);
+                } else {
+                    throw new Error('Failed to submit booking');
+                }
+            } catch (error) {
+                console.error('Error submitting booking:', error);
+                showNotification('Sorry, there was an error with your booking. Please try again.', 'error');
+            }
+        });
+        {{/if}}
+
+        // Newsletter subscription
+        document.getElementById('newsletter-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                type: 'newsletter',
+                businessId: CONFIG.businessId,
+                email: document.getElementById('newsletter-email').value,
+                timestamp: new Date().toISOString(),
+                source: 'mini-website'
+            };
+
+            try {
+                const response = await fetch(`${CONFIG.apiEndpoint}/api/public/submit-newsletter`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    showNotification('Successfully subscribed to our newsletter!', 'success');
+                    this.reset();
+                    trackEvent('newsletter_subscribed', formData);
+                } else {
+                    throw new Error('Failed to subscribe');
+                }
+            } catch (error) {
+                console.error('Error subscribing to newsletter:', error);
+                showNotification('Sorry, subscription failed. Please try again.', 'error');
+            }
+        });
+
+        // Utility functions
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg text-white max-w-sm transition-all transform translate-x-full`;
+            
+            if (type === 'success') {
+                notification.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                notification.classList.add('bg-red-500');
+            } else {
+                notification.classList.add('bg-blue-500');
+            }
+            
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        function trackEvent(eventName, data = {}) {
+            // Send analytics data to main platform
+            fetch(`${CONFIG.apiEndpoint}/api/public/track-event`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    event: eventName,
+                    businessId: CONFIG.businessId,
+                    data: data,
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                })
+            }).catch(error => console.error('Tracking error:', error));
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Track page view
+            trackEvent('page_viewed', {
+                page: 'home',
+                businessName: '{{BUSINESS_NAME}}',
+                businessType: '{{BUSINESS_TYPE}}'
+            });
+
+            // Generate QR code (placeholder - you can integrate a real QR code library)
+            generateQRCode();
+            
+            // Lazy load images
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazy');
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('img[data-src]').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            }
+        });
+
+        function generateQRCode() {
+            // Simple QR code placeholder - integrate with a real QR library like qrcode.js
+            const qrElement = document.getElementById('qr-code');
+            if (qrElement && '{{WEBSITE_URL}}') {
+                qrElement.innerHTML = '<i class="fas fa-qrcode text-primary text-2xl"></i>';
+                // In a real implementation, you would generate the actual QR code here
+                // Example: QRCode.toCanvas(qrElement, '{{WEBSITE_URL}}');
+            }
+        }
+
+        // Auto-update business hours status
+        function updateBusinessStatus() {
+            const hoursElement = document.querySelector('.business-hours-status');
+            if (hoursElement && '{{BUSINESS_HOURS}}') {
+                const now = new Date();
+                // Parse business hours and determine if open/closed
+                // This is a simplified example
+                const currentHour = now.getHours();
+                const isOpen = currentHour >= 9 && currentHour < 18; // 9 AM to 6 PM
+                
+                hoursElement.innerHTML = isOpen 
+                    ? '<span class="text-green-500"><i class="fas fa-circle"></i> Open Now</span>'
+                    : '<span class="text-red-500"><i class="fas fa-circle"></i> Closed</span>';
+            }
+        }
+
+        // Call on page load and every minute
+        updateBusinessStatus();
+        setInterval(updateBusinessStatus, 60000);
+    </script>
+</body>
+</html>

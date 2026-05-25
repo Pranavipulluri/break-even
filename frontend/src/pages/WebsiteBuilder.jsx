@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, Palette, Settings, Eye, Edit, Save, Bot, Rocket } from 'lucide-react';
+import { Bot, CreditCard, Download, Eye, Globe, Palette, Rocket, Save, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { api } from '../services/api';
-import { aiServices } from '../services/aiServices';
-import WebsitePreview from '../components/website/WebsitePreview';
 import toast from 'react-hot-toast';
+import WebsitePreview from '../components/website/WebsitePreview';
+import { useTranslation } from '../contexts/TranslationContext';
+import { api } from '../services/api';
 
 // Debug auth in development
 if (process.env.NODE_ENV === 'development') {
@@ -12,6 +12,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const WebsiteBuilder = () => {
+  const { currentLanguage, changeLanguage, translateWebsiteContent, t } = useTranslation();
   const [currentWebsite, setCurrentWebsite] = useState(null);
   const [themes, setThemes] = useState({});
   const [colorSchemes, setColorSchemes] = useState({});
@@ -20,7 +21,18 @@ const WebsiteBuilder = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [deployedUrl, setDeployedUrl] = useState(null);
   
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      business_type: '',
+      color_theme: 'blue',
+      practice_areas: [],
+      business_card_design: 'modern',
+      attorney_name: '',
+      attorney_bio: '',
+      years_experience: '',
+      other_practice_areas: ''
+    }
+  });
 
   const selectedBusinessType = watch('business_type');
   const selectedColorTheme = watch('color_theme');
@@ -248,6 +260,276 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
     }
   };
 
+  const createProfessionalLawFirmWebsite = async () => {
+    try {
+      setAiLoading(true);
+      
+      const formData = watch();
+      if (!formData.website_name || !formData.contact_info?.email) {
+        toast.error('Please enter website name and business email first');
+        return;
+      }
+
+      toast.loading('⚖️ Creating professional law firm website...', { duration: 4000 });
+      
+      const lawFirmData = {
+        // Basic info (what the endpoint expects)
+        website_name: formData.website_name,
+        business_email: formData.contact_info?.email,
+        business_phone: formData.contact_info?.phone || '',
+        business_address: formData.contact_info?.address || '',
+        description: formData.description || `Professional legal services from ${formData.website_name}`,
+        
+        // Practice areas
+        practice_areas: formData.practice_areas || ['General Practice', 'Civil Law', 'Business Law'],
+        
+        // Attorney info
+        attorney_name: formData.attorney_name || 'Attorney Name',
+        attorney_bio: formData.attorney_bio || 'Experienced legal professional dedicated to serving clients with integrity and expertise.',
+        years_experience: formData.years_experience ? parseInt(formData.years_experience) || 5 : 5,
+        
+        // Business card design
+        business_card_design: formData.business_card_design || 'modern',
+        
+        // Language preference
+        target_language: currentLanguage,
+        
+        // Optional
+        business_id: formData.business_id || null
+      };
+
+      console.log('Sending law firm data:', lawFirmData);
+
+      // Use law firm integration service
+      const response = await fetch('http://localhost:5000/api/law-firm/create-website', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lawFirmData)
+      });
+      
+      const result = await response.json();
+      
+      console.log('Backend response:', result);
+      console.log('Response status:', response.status);
+      
+      if (result.success && result.website_url) {
+        let websiteData = {
+          ...formData,
+          website_url: result.website_url,
+          netlify_url: result.netlify_url,
+          law_firm_features: true,
+          business_card_url: result.business_card_url,
+          business_card_front_url: result.business_card_url, // Map to front_url
+          business_card_back_url: result.business_card_back_url,
+          business_card_design: result.business_card_design,
+          attorney_profile: result.attorney_profile,
+          practice_areas: result.practice_areas,
+          firm_id: result.firm_id,
+          qr_code_url: result.qr_code_url,
+          business_cards: result.business_cards, // Include full business card data
+          created_at: new Date().toISOString()
+        };
+
+        // Translate content if not in English
+        if (currentLanguage !== 'en') {
+          websiteData = await translateWebsiteContent(websiteData, currentLanguage);
+        }
+        
+        setCurrentWebsite(websiteData);
+        
+        toast.success('✅ Professional law firm website created successfully!');
+        toast.success(`🌐 Website URL: ${result.website_url}`, { duration: 8000 });
+        if (result.business_card_url) {
+          toast.success(`💼 Business cards generated! Check deployment section for downloads.`, { duration: 6000 });
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create law firm website');
+      }
+
+    } catch (error) {
+      console.error('Law Firm Website Creation Error:', error);
+      console.error('Full error details:', error.stack);
+      
+      // Try to get more detailed error info
+      if (error.response) {
+        console.error('Response error:', error.response);
+      }
+      
+      toast.error(error.message || 'Failed to create professional law firm website');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const createProfessionalSpaWebsite = async () => {
+    try {
+      setAiLoading(true);
+      
+      const formData = watch();
+      if (!formData.website_name || !formData.contact_info?.email) {
+        toast.error('Please enter website name and business email first');
+        return;
+      }
+
+      toast.loading('🌸 Creating professional spa website...', { duration: 4000 });
+      
+      const spaData = {
+        // Basic salon info
+        salon_name: formData.website_name,
+        owner_name: formData.owner_name || 'Spa Owner',
+        email_address: formData.contact_info?.email,
+        phone_number: formData.contact_info?.phone || '',
+        address: formData.contact_info?.address || '',
+        description: formData.description || `Luxury spa and beauty services at ${formData.website_name}`,
+        
+        // Services
+        services: [
+          { name: 'Facial Treatments', price: '80', duration: '60', description: 'Professional facial treatments for radiant skin' },
+          { name: 'Massage Therapy', price: '100', duration: '90', description: 'Relaxing full-body massage therapy' },
+          { name: 'Hair Styling', price: '60', duration: '45', description: 'Expert hair styling and coloring' },
+          { name: 'Nail Care', price: '40', duration: '30', description: 'Manicure and pedicure services' },
+          { name: 'Spa Packages', price: '200', duration: '180', description: 'Complete relaxation spa packages' },
+          { name: 'Skincare Consultation', price: '50', duration: '30', description: 'Personalized skincare advice' }
+        ],
+        
+        // Staff members
+        staff_members: [
+          {
+            name: formData.staff_name || 'Head Stylist',
+            title: 'Senior Beauty Specialist',
+            specializations: ['Hair Styling', 'Color Expert', 'Bridal Beauty'],
+            bio: 'Expert beauty specialist with years of experience in luxury spa treatments',
+            available_hours: {
+              monday: ['09:00', '17:00'],
+              tuesday: ['09:00', '17:00'],
+              wednesday: ['09:00', '17:00'],
+              thursday: ['09:00', '17:00'],
+              friday: ['09:00', '17:00'],
+              saturday: ['10:00', '16:00']
+            }
+          },
+          {
+            name: 'Spa Therapist',
+            title: 'Massage Therapist',
+            specializations: ['Deep Tissue Massage', 'Hot Stone', 'Aromatherapy'],
+            bio: 'Licensed massage therapist specializing in relaxation and therapeutic treatments',
+            available_hours: {
+              monday: ['10:00', '18:00'],
+              tuesday: ['10:00', '18:00'],
+              wednesday: ['10:00', '18:00'],
+              thursday: ['10:00', '18:00'],
+              friday: ['10:00', '18:00'],
+              saturday: ['11:00', '17:00']
+            }
+          }
+        ],
+        
+        // Business card design
+        business_card_design: formData.business_card_design || 'spa_serenity',
+        
+        // Language preference
+        target_language: currentLanguage,
+        
+        // Operating hours
+        business_hours: {
+          monday: '9:00 AM - 6:00 PM',
+          tuesday: '9:00 AM - 6:00 PM',
+          wednesday: '9:00 AM - 6:00 PM',
+          thursday: '9:00 AM - 6:00 PM',
+          friday: '9:00 AM - 6:00 PM',
+          saturday: '10:00 AM - 5:00 PM',
+          sunday: 'Closed'
+        },
+        
+        // Optional
+        business_id: formData.business_id || null
+      };
+
+      console.log('Sending spa data:', spaData);
+
+      // Use beauty salon integration service
+      const response = await fetch('http://localhost:5000/api/beauty-salon/create-complete-salon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(spaData)
+      });
+      
+      const result = await response.json();
+      
+      console.log('Backend response:', result);
+      console.log('Response status:', response.status);
+      
+      if (result.success) {
+        let websiteData = {
+          ...formData,
+          website_url: result.website_url || result.website?.website_url || null,
+          netlify_url: result.netlify_url || result.website?.netlify_url || null,
+          spa_features: true,
+          business_card_url: result.business_card_url,
+          business_card_front_url: result.business_card_url, // Map to front_url
+          business_card_back_url: result.business_card_back_url,
+          business_card_design: result.business_card_design,
+          staff_profiles: result.staff_profiles,
+          services: result.services,
+          salon_id: result.salon_id,
+          qr_code_url: result.qr_code_url,
+          business_cards: result.business_cards, // Include full business card data
+          website_files: result.website?.website_files, // Include website files
+          deployment_info: result.website?.deployment, // Include deployment info
+          created_at: new Date().toISOString()
+        };
+
+        // Translate content if not in English
+        if (currentLanguage !== 'en') {
+          websiteData = await translateWebsiteContent(websiteData, currentLanguage);
+        }
+        
+        setCurrentWebsite(websiteData);
+        
+        toast.success('✅ Professional spa website created successfully!');
+        
+        // Show appropriate URL message
+        if (websiteData.website_url) {
+          toast.success(`🌐 Website deployed! URL: ${websiteData.website_url}`, { duration: 8000 });
+          
+          // Show QR code message if available
+          if (websiteData.qr_code_url) {
+            toast.success(`📱 QR code generated! Scan to visit your spa website.`, { duration: 6000 });
+          }
+        } else if (websiteData.deployment_info?.ready_for_netlify) {
+          if (websiteData.deployment_info?.netlify_deployed === false) {
+            toast.success(`📁 Website files created! Netlify deployment attempted but files are ready for manual deployment.`, { duration: 8000 });
+          } else {
+            toast.success(`📁 Website files created! Ready for deployment to Netlify.`, { duration: 6000 });
+          }
+        }
+        
+        if (result.business_cards && result.business_cards.length > 0) {
+          toast.success(`💼 Spa business cards generated! Check deployment section for downloads.`, { duration: 6000 });
+        }
+      } else {
+        throw new Error(result.error || 'Failed to create spa website');
+      }
+
+    } catch (error) {
+      console.error('Spa Website Creation Error:', error);
+      console.error('Full error details:', error.stack);
+      
+      // Try to get more detailed error info
+      if (error.response) {
+        console.error('Response error:', error.response);
+      }
+      
+      toast.error(error.message || 'Failed to create professional spa website');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const onSubmit = async (data) => {
     try {
       setLoading(true);
@@ -323,12 +605,15 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in relative">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Website Builder</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('website_builder', 'Website Builder')}</h1>
           <p className="text-gray-600 mt-2">
-            {currentWebsite ? 'Update your business website' : 'Create your business website'}
+            {currentWebsite 
+              ? t('update_business_website', 'Update your business website')
+              : t('create_business_website', 'Create your business website')
+            }
           </p>
         </div>
         
@@ -397,6 +682,7 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
                 <option value="fitness">Fitness Center/Gym</option>
                 <option value="automotive">Auto Repair/Service</option>
                 <option value="healthcare">Healthcare/Medical</option>
+                <option value="lawfirm">Law Firm/Legal Services</option>
                 <option value="real_estate">Real Estate</option>
                 <option value="consulting">Consulting/Professional Services</option>
                 <option value="education">Education/Training</option>
@@ -408,6 +694,76 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
               </select>
               {errors.business_type && (
                 <p className="text-red-500 text-sm mt-1">{errors.business_type.message}</p>
+              )}
+              
+              {/* Law Firm Information Banner */}
+              {selectedBusinessType === 'lawfirm' && (
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">Law Firm Features Available</h4>
+                      <p className="text-sm text-blue-800 mb-2">
+                        You've selected Law Firm - additional features will be available including:
+                      </p>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Professional attorney profiles with photos and bios</li>
+                        <li>• Custom business card generation (5 professional designs)</li>
+                        <li>• Practice area specialization setup</li>
+                        <li>• Consultation booking system</li>
+                        <li>• Professional law firm website templates</li>
+                      </ul>
+                      <p className="text-sm text-blue-600 mt-2 font-medium">
+                        🎯 Fill out all sections, then use "Create Professional Law Firm Website" button!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {selectedBusinessType === 'lawfirm' && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-900">Law Firm Features Enabled</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        You'll be able to create a professional law firm website with business cards, attorney profiles, practice area showcases, and consultation booking system.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Beauty Salon/Spa Information Banner */}
+              {selectedBusinessType === 'beauty' && (
+                <div className="mt-3 p-4 bg-pink-50 border border-pink-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-6 h-6 text-pink-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-semibold text-pink-900 mb-1">Beauty Salon/Spa Features Available</h4>
+                      <p className="text-sm text-pink-800 mb-2">
+                        You've selected Beauty Salon/Spa - advanced spa features will be available including:
+                      </p>
+                      <ul className="text-sm text-pink-700 space-y-1">
+                        <li>• Professional staff profiles with specializations</li>
+                        <li>• Beautiful spa-themed business cards (5 elegant designs)</li>
+                        <li>• Service catalog with pricing and duration</li>
+                        <li>• Advanced appointment booking system</li>
+                        <li>• Luxury spa website templates with relaxing themes</li>
+                        <li>• Client review and feedback system</li>
+                      </ul>
+                      <p className="text-sm text-pink-600 mt-2 font-medium">
+                        🌸 Fill out all sections, then use "Create Professional Spa Website" button!
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -698,6 +1054,151 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
           </div>
         </div>
 
+        {/* Law Firm Specific Fields */}
+        {selectedBusinessType === 'lawfirm' && (
+          <>
+            {/* Attorney Information */}
+            <div className="card border-l-4 border-blue-500">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                Attorney Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attorney Name *
+                  </label>
+                  <input
+                    {...register('attorney_name', { 
+                      required: selectedBusinessType === 'lawfirm' ? 'Attorney name is required' : false 
+                    })}
+                    className="input-field"
+                    placeholder="John Smith, Esq."
+                  />
+                  {errors.attorney_name && (
+                    <p className="text-red-500 text-sm mt-1">{errors.attorney_name.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Years of Experience
+                  </label>
+                  <input
+                    {...register('years_experience')}
+                    type="number"
+                    className="input-field"
+                    placeholder="10"
+                    min="0"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Attorney Bio
+                  </label>
+                  <textarea
+                    {...register('attorney_bio')}
+                    rows="4"
+                    className="input-field"
+                    placeholder="Professional background, education, specializations, and achievements..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Practice Areas */}
+            <div className="card border-l-4 border-green-500">
+              <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Practice Areas
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Practice Areas (Select multiple)
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      'Civil Law', 'Criminal Law', 'Family Law', 'Business Law', 
+                      'Real Estate Law', 'Personal Injury', 'Immigration Law',
+                      'Employment Law', 'Intellectual Property', 'Tax Law',
+                      'Estate Planning', 'Medical Malpractice'
+                    ].map((area) => (
+                      <label key={area} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          {...register('practice_areas')}
+                          value={area}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{area}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Other Practice Areas
+                  </label>
+                  <input
+                    {...register('other_practice_areas')}
+                    className="input-field"
+                    placeholder="Enter additional practice areas (comma separated)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Business Card Design */}
+            <div className="card border-l-4 border-purple-500">
+              <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h4l2-2-4-4-2 2v4z" />
+                </svg>
+                Business Card Design
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Choose Business Card Style
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { value: 'modern', label: 'Modern Professional', desc: 'Clean, minimalist design with blue accents' },
+                      { value: 'classic', label: 'Classic Traditional', desc: 'Traditional layout with serif fonts' },
+                      { value: 'elegant', label: 'Elegant Premium', desc: 'Sophisticated design with gold accents' },
+                      { value: 'corporate', label: 'Corporate Standard', desc: 'Standard business format' },
+                      { value: 'creative', label: 'Creative Contemporary', desc: 'Modern design with creative elements' }
+                    ].map((design) => (
+                      <label key={design.value} className="cursor-pointer">
+                        <input
+                          type="radio"
+                          {...register('business_card_design')}
+                          value={design.value}
+                          className="sr-only"
+                        />
+                        <div className="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-500 transition-colors duration-200 peer-checked:border-purple-500 peer-checked:bg-purple-50">
+                          <h4 className="font-semibold text-gray-900">{design.label}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{design.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Advanced Settings */}
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h3>
@@ -769,6 +1270,85 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
                 </div>
               )}
             </div>
+
+            {/* Business Card Download Section */}
+            {(currentWebsite.business_card_front_url || currentWebsite.business_card_back_url) && (
+              <div className="mt-6 p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <CreditCard className="text-amber-600 mr-2" size={20} />
+                  <h4 className="text-lg font-semibold text-amber-900">
+                    {currentWebsite.spa_features ? 'Professional Spa Business Cards' : 
+                     currentWebsite.law_firm_features ? 'Professional Law Firm Business Cards' : 
+                     'Professional Business Cards'}
+                  </h4>
+                </div>
+                <p className="text-sm text-amber-800 mb-4">
+                  Download your professionally designed business cards below
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {currentWebsite.business_card_front_url && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-amber-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium text-gray-900">Front Design</h5>
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                          {currentWebsite.business_card_design || 'Modern'}
+                        </span>
+                      </div>
+                      <div className="mb-3">
+                        <img 
+                          src={currentWebsite.business_card_front_url} 
+                          alt="Business Card Front" 
+                          className="w-full h-32 object-cover rounded border border-gray-200"
+                          style={{ aspectRatio: '3.5/2' }}
+                        />
+                      </div>
+                      <a
+                        href={currentWebsite.business_card_front_url}
+                        download="business-card-front.png"
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                      >
+                        <Download size={16} />
+                        <span>Download Front</span>
+                      </a>
+                    </div>
+                  )}
+                  
+                  {currentWebsite.business_card_back_url && (
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-amber-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium text-gray-900">Back Design</h5>
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                          Professional
+                        </span>
+                      </div>
+                      <div className="mb-3">
+                        <img 
+                          src={currentWebsite.business_card_back_url} 
+                          alt="Business Card Back" 
+                          className="w-full h-32 object-cover rounded border border-gray-200"
+                          style={{ aspectRatio: '3.5/2' }}
+                        />
+                      </div>
+                      <a
+                        href={currentWebsite.business_card_back_url}
+                        download="business-card-back.png"
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+                      >
+                        <Download size={16} />
+                        <span>Download Back</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-4 p-3 bg-amber-100 rounded-lg">
+                  <p className="text-xs text-amber-800">
+                    💡 <strong>Tip:</strong> These business cards are professionally designed and print-ready at standard business card dimensions (3.5" × 2").
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -824,6 +1404,42 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
               )}
               <span>Create Data Collection Site</span>
             </button>
+            
+            {/* Law Firm Specific Option */}
+            {selectedBusinessType === 'lawfirm' && (
+              <button
+                type="button"
+                onClick={createProfessionalLawFirmWebsite}
+                disabled={aiLoading}
+                className="btn-primary flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                {aiLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Globe size={16} />
+                )}
+                <span>Create Professional Law Firm Website</span>
+              </button>
+            )}
+            
+            {/* Beauty Salon/Spa Specific Option */}
+            {selectedBusinessType === 'beauty' && (
+              <button
+                type="button"
+                onClick={createProfessionalSpaWebsite}
+                disabled={aiLoading}
+                className="btn-primary flex items-center space-x-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
+              >
+                {aiLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span>Create Professional Spa Website</span>
+              </button>
+            )}
           </div>
           
           {deployedUrl && (

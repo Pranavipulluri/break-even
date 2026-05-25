@@ -1,0 +1,669 @@
+/* ================================================================
+   AI COPILOT DRAWER — Glassmorphic Premium Design System
+   ================================================================
+   Features: Glassmorphism, HSL gradients, slide-in keyframes,
+   micro-animations, vibrant accent colors, premium dark theme.
+   ================================================================ */
+
+/* ---- Design Tokens ---- */
+:root {
+  --copilot-bg: rgba(15, 18, 30, 0.92);
+  --copilot-glass: rgba(255, 255, 255, 0.06);
+  --copilot-glass-border: rgba(255, 255, 255, 0.1);
+  --copilot-accent: hsl(250, 90%, 65%);
+  --copilot-accent-soft: hsl(250, 90%, 85%);
+  --copilot-success: hsl(150, 70%, 50%);
+  --copilot-error: hsl(0, 80%, 60%);
+  --copilot-warning: hsl(40, 95%, 55%);
+  --copilot-text: hsl(0, 0%, 95%);
+  --copilot-text-muted: hsl(230, 15%, 65%);
+  --copilot-width: 420px;
+  --copilot-radius: 20px;
+}
+
+/* ---- Floating Trigger Button ---- */
+.copilot-trigger {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9998;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, hsl(250, 90%, 60%), hsl(280, 80%, 55%));
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 8px 32px rgba(99, 66, 255, 0.4),
+    0 0 0 3px rgba(99, 66, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.copilot-trigger:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 12px 40px rgba(99, 66, 255, 0.5),
+    0 0 0 4px rgba(99, 66, 255, 0.2);
+}
+
+.copilot-trigger-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.copilot-trigger-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(99, 66, 255, 0.5);
+  animation: copilotPulse 2s ease-in-out infinite;
+}
+
+@keyframes copilotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0; }
+}
+
+/* ---- Backdrop ---- */
+.copilot-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* ---- Drawer Panel ---- */
+.copilot-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  width: var(--copilot-width);
+  max-width: 100vw;
+  background: var(--copilot-bg);
+  backdrop-filter: blur(40px) saturate(1.8);
+  border-left: 1px solid var(--copilot-glass-border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
+}
+
+.copilot-drawer--open {
+  transform: translateX(0);
+}
+
+/* ---- Header ---- */
+.copilot-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--copilot-glass-border);
+  background: linear-gradient(135deg, rgba(99, 66, 255, 0.12), rgba(180, 66, 255, 0.08));
+}
+
+.copilot-header-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.copilot-header-icon {
+  font-size: 28px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--copilot-glass);
+  border: 1px solid var(--copilot-glass-border);
+  border-radius: 14px;
+}
+
+.copilot-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--copilot-text);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.copilot-subtitle {
+  font-size: 11px;
+  color: var(--copilot-text-muted);
+  margin: 2px 0 0;
+}
+
+.copilot-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--copilot-glass-border);
+  background: var(--copilot-glass);
+  color: var(--copilot-text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.copilot-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--copilot-text);
+}
+
+/* ---- Tabs ---- */
+.copilot-tabs {
+  display: flex;
+  padding: 0 24px;
+  gap: 4px;
+  border-bottom: 1px solid var(--copilot-glass-border);
+}
+
+.copilot-tab {
+  flex: 1;
+  padding: 12px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--copilot-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.copilot-tab:hover {
+  color: var(--copilot-text);
+}
+
+.copilot-tab--active {
+  color: var(--copilot-accent-soft);
+  border-bottom-color: var(--copilot-accent);
+}
+
+/* ---- Content Area ---- */
+.copilot-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.copilot-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.copilot-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.copilot-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* ---- Empty State ---- */
+.copilot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.copilot-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.copilot-empty p {
+  color: var(--copilot-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 260px;
+}
+
+/* ---- Thought Entries ---- */
+.copilot-thoughts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thought-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--copilot-glass);
+  border: 1px solid var(--copilot-glass-border);
+  animation: thoughtSlideIn 0.35s ease-out both;
+}
+
+@keyframes thoughtSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.thought-entry--success {
+  border-left: 3px solid var(--copilot-success);
+}
+
+.thought-entry--error {
+  border-left: 3px solid var(--copilot-error);
+  background: rgba(255, 60, 60, 0.06);
+}
+
+.thought-entry--active {
+  border-left: 3px solid var(--copilot-accent);
+}
+
+.thought-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.thought-spinner {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.thought-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.thought-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--copilot-accent-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.thought-message {
+  font-size: 13px;
+  color: var(--copilot-text);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.thought-time {
+  font-size: 10px;
+  color: var(--copilot-text-muted);
+  margin-top: 6px;
+}
+
+/* ---- Impact Card ---- */
+.impact-card {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, hsl(250, 80%, 55%), hsl(290, 70%, 50%));
+  box-shadow: 0 8px 24px rgba(99, 66, 255, 0.25);
+}
+
+.impact-card-header {
+  padding: 14px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.impact-card-body {
+  display: flex;
+  gap: 16px;
+  padding: 20px 18px;
+}
+
+.impact-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.impact-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.2;
+}
+
+.impact-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- Proposal Section ---- */
+.copilot-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.proposal-section {
+  background: var(--copilot-glass);
+  border: 1px solid var(--copilot-glass-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.proposal-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--copilot-accent-soft);
+  margin: 0 0 10px;
+}
+
+.proposal-text {
+  font-size: 13px;
+  color: var(--copilot-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ---- Delta View ---- */
+.delta-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delta-panel {
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--copilot-glass-border);
+}
+
+.delta-panel--before {
+  background: rgba(255, 60, 60, 0.06);
+  border-color: rgba(255, 60, 60, 0.15);
+}
+
+.delta-panel--after {
+  background: rgba(60, 200, 100, 0.06);
+  border-color: rgba(60, 200, 100, 0.15);
+}
+
+.delta-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  color: var(--copilot-text-muted);
+}
+
+.delta-panel--before .delta-label { color: hsl(0, 70%, 65%); }
+.delta-panel--after .delta-label { color: hsl(150, 70%, 55%); }
+
+.delta-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.delta-field {
+  font-size: 12px;
+  color: var(--copilot-text);
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.delta-key {
+  font-weight: 600;
+  color: var(--copilot-text-muted);
+  flex-shrink: 0;
+}
+
+.delta-changed {
+  color: hsl(150, 70%, 60%);
+  font-weight: 600;
+}
+
+/* ---- Action Buttons ---- */
+.proposal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-apply {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, hsl(150, 70%, 45%), hsl(160, 60%, 40%));
+  color: white;
+  box-shadow: 0 4px 16px rgba(40, 180, 100, 0.3);
+  transition: all 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-apply:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(40, 180, 100, 0.4);
+}
+
+.btn-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-rollback {
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--copilot-glass-border);
+  background: var(--copilot-glass);
+  color: var(--copilot-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-rollback:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--copilot-text);
+}
+
+.btn-rollback:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Timeline ---- */
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 20px;
+  border-left: 2px solid var(--copilot-glass-border);
+}
+
+.timeline-entry {
+  display: flex;
+  gap: 16px;
+  padding: 14px 0;
+  position: relative;
+  animation: thoughtSlideIn 0.3s ease-out both;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -25px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--copilot-accent);
+  border: 2px solid var(--copilot-bg);
+  box-shadow: 0 0 8px rgba(99, 66, 255, 0.4);
+}
+
+.timeline-body {
+  flex: 1;
+}
+
+.timeline-version {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--copilot-text);
+}
+
+.timeline-meta {
+  font-size: 12px;
+  color: var(--copilot-accent-soft);
+  margin-top: 2px;
+}
+
+.timeline-reason {
+  font-size: 12px;
+  color: var(--copilot-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.timeline-impact {
+  font-size: 11px;
+  color: var(--copilot-success);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.timeline-confidence {
+  color: var(--copilot-text-muted);
+  font-weight: 400;
+}
+
+.timeline-time {
+  font-size: 10px;
+  color: var(--copilot-text-muted);
+  margin-top: 4px;
+}
+
+/* ---- Input Area ---- */
+.copilot-input-area {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--copilot-glass-border);
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.copilot-input {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--copilot-glass-border);
+  background: var(--copilot-glass);
+  color: var(--copilot-text);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.copilot-input::placeholder {
+  color: var(--copilot-text-muted);
+}
+
+.copilot-input:focus {
+  border-color: var(--copilot-accent);
+  box-shadow: 0 0 0 3px rgba(99, 66, 255, 0.15);
+}
+
+.copilot-input:disabled {
+  opacity: 0.5;
+}
+
+.copilot-send {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, hsl(250, 90%, 60%), hsl(280, 80%, 55%));
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(99, 66, 255, 0.3);
+}
+
+.copilot-send:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 66, 255, 0.45);
+}
+
+.copilot-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Animations ---- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  :root {
+    --copilot-width: 100vw;
+  }
+
+  .copilot-drawer {
+    border-radius: 0;
+  }
+
+  .copilot-trigger {
+    bottom: 16px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+  }
+}

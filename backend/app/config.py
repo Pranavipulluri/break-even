@@ -18,21 +18,22 @@ class Config:
     # OpenAI API
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     
-    # Gemini AI API
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or 'AIzaSyD25Qkutz-mjpOz8ELQVWmocw0hBoFAG2A'
+    # Gemini AI API — MUST be set via GEMINI_API_KEY env var
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
     
-    # GitHub API
-    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN') or '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'
+    # GitHub API — MUST be set via GITHUB_TOKEN env var
+    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
     
-    # Netlify API
-    NETLIFY_API_KEY = os.environ.get('NETLIFY_API_KEY') or 'nfp_tHbhsuDnH1k8SLeyb7VeqtGxDaoHqyxBadfc'
+    # Netlify API — MUST be set via NETLIFY_API_KEY env var
+    NETLIFY_API_KEY = os.environ.get('NETLIFY_API_KEY')
     
-    # Groq API (for image generation)
-    GROQ_API_KEY = os.environ.get('GROQ_API_KEY') or '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'
+    # Groq API (for image generation) — MUST be set via GROQ_API_KEY env var
+    GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
     
-    # Stability AI API (for image generation)
-    STABILITY_API_KEY = os.environ.get('STABILITY_API_KEY') or 'sk-Ci8STOuJz4ZE1xGzmQXFDoykscMoNFoD4OCQZr5BlWgd83O2'
+    # Stability AI API (for image generation) — MUST be set via STABILITY_API_KEY env var
+    STABILITY_API_KEY = os.environ.get('STABILITY_API_KEY')
     
     # Website builder settings
     WEBSITE_BASE_URL = os.environ.get('WEBSITE_BASE_URL') or 'http://localhost:3001'
     FRONTEND_URL = os.environ.get('FRONTEND_URL') or 'http://localhost:3001'
+
