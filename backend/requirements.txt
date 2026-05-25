@@ -9,6 +9,9 @@ Flask-Caching==2.1.0
 python-socketio==5.8.0
 Werkzeug==2.3.6
 
+# MCP (Model Context Protocol) Server SDK
+mcp[cli]>=1.0.0
+
 # Database
 pymongo==4.4.1
 redis==4.6.0
@@ -20,6 +23,7 @@ python-decouple==3.8
 # Image Processing & AI
 Pillow==10.0.0
 requests==2.31.0
+moviepy==1.0.3
 
 # Authentication & Security
 bcrypt==4.0.1

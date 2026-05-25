@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Reply, Eye, Clock, User, Mail, Phone } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { api } from '../services/api';
-import Modal from '../components/common/Modal';
+import { Calendar, Clock, Eye, Mail, MessageSquare, Phone, Reply, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { useApp } from '../context/AppContext';
+import { api } from '../services/api';
 
 const Messages = () => {
   const { messages, dispatch } = useApp();
@@ -13,12 +12,86 @@ const Messages = () => {
   const [filter, setFilter] = useState('all'); // all, unread, replied
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeTab, setActiveTab] = useState('messages'); // messages, consultations
+  const [consultations, setConsultations] = useState([]);
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   useEffect(() => {
-    fetchMessages();
-  }, [currentPage, filter]);
+    if (activeTab === 'messages') {
+      fetchMessages();
+    } else {
+      fetchConsultations();
+    }
+  }, [currentPage, filter, activeTab]);
+
+  // Mock consultation data
+  const mockConsultations = [
+    {
+      id: 1,
+      clientName: 'John Smith',
+      clientEmail: 'john.smith@email.com',
+      clientPhone: '+91 98765 43210',
+      practiceArea: 'Corporate Law',
+      caseDescription: 'Need assistance with business incorporation and compliance matters for a tech startup.',
+      preferredDate: '2024-10-15',
+      preferredTime: '10:00 AM',
+      urgencyLevel: 'medium',
+      status: 'pending',
+      createdAt: '2024-10-10T09:30:00Z',
+      isExistingCase: false,
+      budgetRange: '$5000-$10000'
+    },
+    {
+      id: 2,
+      clientName: 'Sarah Johnson',
+      clientEmail: 'sarah.j@email.com',
+      clientPhone: '+91 98765 43211',
+      practiceArea: 'Family Law',
+      caseDescription: 'Divorce proceedings and child custody arrangements. Need immediate consultation.',
+      preferredDate: '2024-10-12',
+      preferredTime: '2:00 PM',
+      urgencyLevel: 'high',
+      status: 'confirmed',
+      createdAt: '2024-10-09T14:20:00Z',
+      isExistingCase: true,
+      budgetRange: '$3000-$5000'
+    },
+    {
+      id: 3,
+      clientName: 'Michael Brown',
+      clientEmail: 'michael.brown@email.com',
+      clientPhone: '+91 98765 43212',
+      practiceArea: 'Real Estate Law',
+      caseDescription: 'Property purchase agreement review and contract negotiation assistance.',
+      preferredDate: '2024-10-18',
+      preferredTime: '11:30 AM',
+      urgencyLevel: 'low',
+      status: 'pending',
+      createdAt: '2024-10-11T11:15:00Z',
+      isExistingCase: false,
+      budgetRange: '$2000-$3000'
+    },
+    {
+      id: 4,
+      clientName: 'Emily Davis',
+      clientEmail: 'emily.davis@email.com',
+      clientPhone: '+91 98765 43213',
+      practiceArea: 'Employment Law',
+      caseDescription: 'Wrongful termination case. Need consultation about employment rights and legal options.',
+      preferredDate: '2024-10-14',
+      preferredTime: '3:30 PM',
+      urgencyLevel: 'medium',
+      status: 'cancelled',
+      createdAt: '2024-10-08T16:45:00Z',
+      isExistingCase: false,
+      budgetRange: '$1500-$3000'
+    }
+  ];
 
   const fetchMessages = async () => {
     try {
@@ -30,6 +103,50 @@ const Messages = () => {
       toast.error('Failed to fetch messages');
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  const fetchConsultations = () => {
+    // For now, use mock data
+    setConsultations(mockConsultations);
+  };
+
+  const confirmConsultation = async (consultationId) => {
+    try {
+      // Update consultation status
+      setConsultations(prev => 
+        prev.map(cons => 
+          cons.id === consultationId 
+            ? { ...cons, status: 'confirmed' }
+            : cons
+        )
+      );
+
+      // Send confirmation email
+      const consultation = consultations.find(c => c.id === consultationId);
+      await api.post('/api/send-consultation-confirmation', {
+        consultation,
+        recipientEmail: 'pulluripranavi@gmail.com'
+      });
+
+      toast.success('Consultation confirmed and email sent!');
+    } catch (error) {
+      toast.error('Failed to confirm consultation');
+    }
+  };
+
+  const cancelConsultation = async (consultationId, reason = '') => {
+    try {
+      setConsultations(prev => 
+        prev.map(cons => 
+          cons.id === consultationId 
+            ? { ...cons, status: 'cancelled', cancellationReason: reason }
+            : cons
+        )
+      );
+      toast.success('Consultation cancelled');
+    } catch (error) {
+      toast.error('Failed to cancel consultation');
     }
   };
 
@@ -74,9 +191,52 @@ const Messages = () => {
     }
   };
 
+  const closeMessage = () => {
+    setSelectedMessage(null);
+  };
+
   const openReplyModal = (message) => {
-    setSelectedMessage(message);
-    setIsReplyModalOpen(true);
+    setReplyTo(message);
+    setShowReplyModal(true);
+    setSelectedMessage(null);
+  };
+
+  const closeReplyModal = () => {
+    setShowReplyModal(false);
+    setReplyTo(null);
+    setReplyMessage('');
+  };
+
+  const sendReply = async () => {
+    if (!replyMessage.trim() || !replyTo) return;
+    
+    setIsReplying(true);
+    try {
+      const response = await fetch('/api/messages/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          messageId: replyTo._id,
+          reply: replyMessage
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Reply sent successfully');
+        closeReplyModal();
+        fetchMessages(); // Refresh messages
+      } else {
+        toast.error('Failed to send reply');
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      toast.error('Failed to send reply');
+    } finally {
+      setIsReplying(false);
+    }
   };
 
   const getMessageTypeIcon = (type) => {
@@ -117,248 +277,396 @@ const Messages = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600 mt-2">Customer inquiries and feedback</p>
-        </div>
-        
-        {/* Filter buttons */}
-        <div className="flex space-x-2">
-          {['all', 'unread', 'replied'].map((filterType) => (
-            <button
-              key={filterType}
-              onClick={() => setFilter(filterType)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === filterType
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-            </button>
-          ))}
+          <h1 className="text-3xl font-bold text-gray-900">Communications</h1>
+          <p className="text-gray-600 mt-2">Manage customer messages and consultations</p>
         </div>
       </div>
 
-      {/* Messages List */}
-      <div className="card">
-        {filteredMessages.length === 0 ? (
-          <div className="text-center py-12">
-            <MessageSquare size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-            <p className="text-gray-600">Customer messages will appear here when they contact you through your website.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredMessages.map((message) => (
-              <div
-                key={message._id}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                  !message.is_read ? 'border-primary-200 bg-primary-50' : 'border-gray-200'
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'messages'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <MessageSquare size={16} />
+              <span>Messages</span>
+              <span className="bg-red-100 text-red-800 text-xs rounded-full px-2 py-0.5">
+                {messages.filter(m => !m.is_read).length}
+              </span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('consultations')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'consultations'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Calendar size={16} />
+              <span>Consultations</span>
+              <span className="bg-blue-100 text-blue-800 text-xs rounded-full px-2 py-0.5">
+                {consultations.filter(c => c.status === 'pending').length}
+              </span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === 'messages' ? (
+        <>
+          {/* Filter buttons for messages */}
+          <div className="flex space-x-2">
+            {['all', 'unread', 'replied'].map((filterType) => (
+              <button
+                key={filterType}
+                onClick={() => setFilter(filterType)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === filterType
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
-                onClick={() => openMessage(message)}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
-                    <div className="flex-shrink-0 mt-1">
-                      {getMessageTypeIcon(message.message_type)}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className={`font-medium ${!message.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
-                          {message.customer_name}
-                        </h3>
-                        <span className="text-gray-500 text-sm">{message.customer_email}</span>
-                      </div>
-                      
-                      <p className={`text-sm mb-2 ${!message.is_read ? 'text-gray-800' : 'text-gray-600'}`}>
-                        {message.content.length > 150 
-                          ? `${message.content.substring(0, 150)}...` 
-                          : message.content
-                        }
-                      </p>
-                      
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <span className="flex items-center space-x-1">
-                          <Clock size={12} />
-                          <span>{new Date(message.created_at).toLocaleDateString()}</span>
-                        </span>
-                        {message.customer_phone && (
-                          <span className="flex items-center space-x-1">
-                            <Phone size={12} />
-                            <span>{message.customer_phone}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    {getStatusBadge(message)}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openReplyModal(message);
-                      }}
-                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                    >
-                      <Reply size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+              </button>
             ))}
           </div>
-        )}
-        
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center space-x-2 mt-6">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Previous
-            </button>
-            
-            <span className="px-3 py-2 text-gray-600">
-              Page {currentPage} of {totalPages}
-            </span>
-            
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
 
-      {/* Message Detail Modal */}
-      <Modal
-        isOpen={!!selectedMessage && !isReplyModalOpen}
-        onClose={() => setSelectedMessage(null)}
-        title="Message Details"
-        size="lg"
-      >
-        {selectedMessage && (
-          <div className="space-y-4">
-            <div className="border-b pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold">{selectedMessage.customer_name}</h3>
-                {getStatusBadge(selectedMessage)}
+          {/* Messages List */}
+          <MessagesTab 
+            messages={messages}
+            filter={filter}
+            openMessage={openMessage}
+            openReplyModal={openReplyModal}
+            getMessageTypeIcon={getMessageTypeIcon}
+            getStatusBadge={getStatusBadge}
+          />
+        </>
+      ) : (
+        <>
+          {/* Filter buttons for consultations */}
+          <div className="flex space-x-2">
+            {['all', 'pending', 'confirmed', 'cancelled'].map((filterType) => (
+              <button
+                key={filterType}
+                onClick={() => setFilter(filterType)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filter === filterType
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Consultations List */}
+          <ConsultationsTab 
+            consultations={consultations}
+            filter={filter}
+            confirmConsultation={confirmConsultation}
+            cancelConsultation={cancelConsultation}
+          />
+        </>
+      )}
+
+      {/* Message Details Modal */}
+      {selectedMessage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedMessage.customer_name}</h3>
+                  <p className="text-gray-600">{selectedMessage.customer_email}</p>
+                </div>
+                <button
+                  onClick={closeMessage}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={24} />
+                </button>
               </div>
               
-              <div className="space-y-1 text-sm text-gray-600">
-                <div className="flex items-center space-x-2">
-                  <Mail size={14} />
-                  <span>{selectedMessage.customer_email}</span>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Message Type</label>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    {selectedMessage.message_type}
+                  </span>
                 </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-900">{selectedMessage.content}</p>
+                  </div>
+                </div>
+                
                 {selectedMessage.customer_phone && (
-                  <div className="flex items-center space-x-2">
-                    <Phone size={14} />
-                    <span>{selectedMessage.customer_phone}</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <p className="text-gray-900">{selectedMessage.customer_phone}</p>
                   </div>
                 )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Received</label>
+                  <p className="text-gray-900">{new Date(selectedMessage.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => openReplyModal(selectedMessage)}
+                  className="flex-1 bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Reply size={16} />
+                  <span>Reply</span>
+                </button>
+                <button
+                  onClick={closeMessage}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reply Modal */}
+      {showReplyModal && replyTo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Reply to {replyTo.customer_name}</h3>
+                <button
+                  onClick={closeReplyModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Your Reply</label>
+                  <textarea
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    placeholder="Type your reply here..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows={5}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={sendReply}
+                  disabled={!replyMessage.trim() || isReplying}
+                  className="flex-1 bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Send size={16} />
+                  <span>{isReplying ? 'Sending...' : 'Send Reply'}</span>
+                </button>
+                <button
+                  onClick={closeReplyModal}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Messages Tab Component
+const MessagesTab = ({ messages, filter, openMessage, openReplyModal, getMessageTypeIcon, getStatusBadge }) => {
+  const filteredMessages = messages.filter(message => {
+    if (filter === 'unread') return !message.is_read;
+    if (filter === 'replied') return message.reply_sent;
+    return true;
+  });
+
+  return (
+    <div className="card">
+      {filteredMessages.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageSquare size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
+          <p className="text-gray-600">Customer messages will appear here when they contact you through your website.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredMessages.map((message) => (
+            <div
+              key={message._id}
+              className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
+                !message.is_read ? 'border-primary-200 bg-primary-50' : 'border-gray-200'
+              }`}
+              onClick={() => openMessage(message)}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3 flex-1">
+                  <div className="flex-shrink-0 mt-1">
+                    {getMessageTypeIcon(message.message_type)}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className={`font-medium ${!message.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                        {message.customer_name}
+                      </h3>
+                      <span className="text-gray-500 text-sm">{message.customer_email}</span>
+                    </div>
+                    
+                    <p className={`text-sm mb-2 ${!message.is_read ? 'text-gray-800' : 'text-gray-600'}`}>
+                      {message.content.length > 150 
+                        ? `${message.content.substring(0, 150)}...` 
+                        : message.content
+                      }
+                    </p>
+                    
+                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                      <span className="flex items-center space-x-1">
+                        <Clock size={12} />
+                        <span>{new Date(message.created_at).toLocaleDateString()}</span>
+                      </span>
+                      {message.customer_phone && (
+                        <span className="flex items-center space-x-1">
+                          <Phone size={12} />
+                          <span>{message.customer_phone}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="flex items-center space-x-2">
-                  <Clock size={14} />
-                  <span>{new Date(selectedMessage.created_at).toLocaleString()}</span>
+                  {getStatusBadge(message)}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openReplyModal(message);
+                    }}
+                    className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+                  >
+                    <Reply size={16} />
+                  </button>
                 </div>
               </div>
             </div>
-            
-            <div>
-              <h4 className="font-medium mb-2">Message:</h4>
-              <p className="text-gray-700 whitespace-pre-wrap">{selectedMessage.content}</p>
-            </div>
-            
-            {selectedMessage.reply && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2 text-blue-900">Your Reply:</h4>
-                <p className="text-blue-800 whitespace-pre-wrap">{selectedMessage.reply}</p>
-                <p className="text-xs text-blue-600 mt-2">
-                  Sent on {new Date(selectedMessage.replied_at).toLocaleString()}
-                </p>
-              </div>
-            )}
-            
-            <div className="flex space-x-3 pt-4">
-              <button
-                onClick={() => openReplyModal(selectedMessage)}
-                className="btn-primary flex items-center space-x-2"
-              >
-                <Reply size={16} />
-                <span>{selectedMessage.reply ? 'Send Another Reply' : 'Reply'}</span>
-              </button>
-              <button
-                onClick={() => setSelectedMessage(null)}
-                className="btn-secondary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
-      {/* Reply Modal */}
-      <Modal
-        isOpen={isReplyModalOpen}
-        onClose={() => {
-          setIsReplyModalOpen(false);
-          setSelectedMessage(null);
-          reset();
-        }}
-        title="Reply to Message"
-      >
-        {selectedMessage && (
-          <form onSubmit={handleSubmit(handleReply)} className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>From:</strong> {selectedMessage.customer_name} ({selectedMessage.customer_email})
-              </p>
-              <p className="text-sm text-gray-700">
-                <strong>Original message:</strong> {selectedMessage.content}
-              </p>
+// Consultations Tab Component
+const ConsultationsTab = ({ consultations, filter, confirmConsultation, cancelConsultation }) => {
+  const filteredConsultations = consultations.filter(consultation => {
+    if (filter === 'pending') return consultation.status === 'pending';
+    if (filter === 'confirmed') return consultation.status === 'confirmed';
+    if (filter === 'cancelled') return consultation.status === 'cancelled';
+    return true;
+  });
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="card">
+      {filteredConsultations.length === 0 ? (
+        <div className="text-center py-12">
+          <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations yet</h3>
+          <p className="text-gray-600">Client consultation requests will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredConsultations.map((consultation) => (
+            <div
+              key={consultation._id}
+              className="p-4 border rounded-lg transition-colors hover:bg-gray-50"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <h3 className="font-medium text-gray-900">{consultation.clientName}</h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(consultation.status)}`}>
+                      {consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1)}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <p><span className="font-medium">Practice Area:</span> {consultation.practiceArea}</p>
+                    <p><span className="font-medium">Preferred Date:</span> {consultation.preferredDate}</p>
+                    <p><span className="font-medium">Email:</span> {consultation.email}</p>
+                    {consultation.phone && (
+                      <p><span className="font-medium">Phone:</span> {consultation.phone}</p>
+                    )}
+                  </div>
+                  
+                  {consultation.message && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Message:</span> {consultation.message}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                    <span className="flex items-center space-x-1">
+                      <Clock size={12} />
+                      <span>Requested {new Date(consultation.createdAt).toLocaleDateString()}</span>
+                    </span>
+                  </div>
+                </div>
+                
+                {consultation.status === 'pending' && (
+                  <div className="flex space-x-2 ml-4">
+                    <button
+                      onClick={() => confirmConsultation(consultation._id)}
+                      className="px-3 py-1 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => cancelConsultation(consultation._id)}
+                      className="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Reply *
-              </label>
-              <textarea
-                {...register('reply', { required: 'Reply is required' })}
-                rows="6"
-                className="input-field"
-                placeholder="Type your reply here..."
-              />
-              {errors.reply && (
-                <p className="text-red-500 text-sm mt-1">{errors.reply.message}</p>
-              )}
-            </div>
-            
-            <div className="flex space-x-3">
-              <button type="submit" className="btn-primary flex-1">
-                Send Reply
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsReplyModalOpen(false);
-                  setSelectedMessage(null);
-                  reset();
-                }}
-                className="btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

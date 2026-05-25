@@ -19,7 +19,7 @@ class StabilityService:
                 self.api_key = current_app.config.get('STABILITY_API_KEY')
             except RuntimeError:
                 # Fallback when outside application context
-                self.api_key = 'sk-Ci8STOuJz4ZE1xGzmQXFDoykscMoNFoD4OCQZr5BlWgd83O2'
+                self.api_key = os.environ.get('STABILITY_API_KEY')
         
         self.base_url = "https://api.stability.ai"
         self.headers = {

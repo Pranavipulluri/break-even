@@ -1,10 +1,242 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Image as ImageIcon, MessageSquare, Lightbulb, Download, Copy, Wand2, Zap, Brain, Palette, FileText, Camera } from 'lucide-react';
-import { api } from '../services/api';
+import { Brain, Camera, Copy, Download, FileText, Lightbulb, MessageSquare, Send, Sparkles, Upload, Video, Wand2 } from 'lucide-react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { api } from '../services/api';
+
+// Auto Reel Generator Component
+const AutoReelGenerator = ({ loading, setLoading }) => {
+  // State variables for reel generation
+  const [productName, setProductName] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [message, setMessage] = useState("");
+  const [mood, setMood] = useState('trendy');
+
+  const moods = ['Funny', 'Trendy', 'Luxury', 'Minimalist', 'Informative'];
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
+  };
+
+  const handleGenerateReel = async () => {
+    if (!productName || !description) {
+      toast.error('Please enter the Product Name and Short Description.');
+      return;
+    }
+    if (!image) {
+      toast.error('Please upload an image.');
+      return;
+    }
+
+    setLoading(true);
+    setVideoUrl(null);
+    setMessage("Generating reel content... please wait.");
+
+    try {
+      // Create a FileReader to read the image file
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const imageUrl = reader.result;
+        
+        try {
+          const response = await api.post("/ai-tools/generate-reel", {
+            productName,
+            price,
+            description,
+            imageUrl,
+            mood
+          });
+          
+          if (response.data.success === false) {
+            throw new Error(response.data.error || 'Failed to generate reel');
+          }
+          
+          setVideoUrl(response.data.videoUrl);
+          setMessage('Reel generated successfully!');
+          toast.success('Reel generated successfully!');
+          
+        } catch (error) {
+          console.error('Error generating reel:', error);
+          setMessage('Failed to generate reel. Please try again.');
+          toast.error('Failed to generate reel');
+        }
+      };
+      
+      reader.readAsDataURL(image); // Convert the image file to base64
+
+    } catch (error) {
+      setMessage("Error: Failed to generate reel.");
+      toast.error('Failed to connect to the backend.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="card shadow-lg p-6 md:p-8">
+        <h2 className="heading-2 text-gray-900 mb-6 flex items-center space-x-2">
+          <Video className="text-red-500" size={24} />
+          <span>Generate Instagram Reel</span>
+        </h2>
+        
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* LEFT COLUMN: Input Form */}
+          <div className="space-y-4">
+            
+            {/* Product Name */}
+            <div>
+              <label className="input-label">Product Name *</label>
+              <input
+                type="text"
+                placeholder="Product Name"
+                value={productName}
+                onChange={e => setProductName(e.target.value)}
+                className="input-field"
+                disabled={loading}
+              />
+            </div>
+            
+            {/* Price / Offer */}
+            <div>
+              <label className="input-label">Price / Offer</label>
+              <input
+                type="text"
+                placeholder="Price / Offer"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                className="input-field"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Short Description */}
+            <div>
+              <label className="input-label">Short Description *</label>
+              <textarea
+                placeholder="Short Description"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows="3"
+                className="input-field resize-none"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Mood / Theme Dropdown */}
+            <div>
+              <label className="input-label">Mood / Theme (Optional)</label>
+              <select
+                value={mood}
+                onChange={e => setMood(e.target.value)}
+                className="input-field"
+                disabled={loading}
+              >
+                {moods.map(m => (
+                  <option key={m} value={m.toLowerCase()}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Upload Image */}
+            <div>
+              <label className="input-label mb-2">Upload Product Image *</label>
+              <div className="flex items-center space-x-3">
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={loading}
+                />
+                <label 
+                  htmlFor="image-upload" 
+                  className={`cursor-pointer btn-secondary flex items-center space-x-2 border-dashed ${loading ? 'opacity-50' : ''}`}
+                >
+                  <Upload size={16} />
+                  <span>{image ? image.name : 'Choose File'}</span>
+                </label>
+                {image && <span className="text-xs text-gray-500 truncate max-w-[150px]">Selected: {image.name}</span>}
+              </div>
+            </div>
+
+            {/* Generate & Post Button */}
+            <button
+              onClick={handleGenerateReel}
+              disabled={!productName || !description || !image || loading}
+              className="btn-primary w-full mt-6 btn-lg relative overflow-hidden group"
+            >
+              <div className="relative flex items-center justify-center space-x-2">
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Generating & Posting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    <span>Generate & Post Reel</span>
+                  </>
+                )}
+              </div>
+            </button>
+          </div>
+
+          {/* RIGHT COLUMN: Video Preview Area */}
+          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 flex flex-col justify-between min-h-[400px]">
+            <h3 className="heading-3 text-gray-700 mb-4">Video Preview</h3>
+            
+            <div className="flex-grow flex items-center justify-center bg-black rounded-lg aspect-[9/16] max-w-[300px] mx-auto overflow-hidden">
+              {videoUrl ? (
+                <video
+                  key={videoUrl}
+                  src={videoUrl}
+                  controls
+                  width="400"
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <div className="text-center text-white/80 p-6">
+                  <Video size={48} className="mx-auto mb-3 text-red-400" />
+                  <p className="text-sm">{loading ? 'Rendering video...' : 'Video will appear here.'}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Message Area */}
+            <div className="mt-4 text-center">
+              {message && (
+                <p className={`text-sm font-semibold flex items-center justify-center space-x-1 ${message.includes("success") ? 'text-green-600' : 'text-red-600'}`}>
+                  <Sparkles size={16} />
+                  <span>Message: "{message}"</span>
+                </p>
+              )}
+              {videoUrl && (
+                <button 
+                  onClick={() => navigator.clipboard.writeText('Your AI-Generated Caption/Script Goes Here.')} 
+                  className="text-xs text-blue-500 hover:underline mt-2 flex items-center justify-center w-full"
+                >
+                  <Copy size={12} className="mr-1" />
+                  Copy AI Caption
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AITools = () => {
-  const [activeTab, setActiveTab] = useState('content');
+  const [activeTab, setActiveTab] = useState('reels');
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedImage, setGeneratedImage] = useState('');
@@ -19,6 +251,13 @@ const AITools = () => {
   const [emailSubject, setEmailSubject] = useState('Marketing Campaign Email');
 
   const tabs = [
+    { 
+      id: 'reels', 
+      name: 'Auto Reel Creator', 
+      icon: Video, 
+      description: 'Create AI-powered video reels',
+      gradient: 'from-red-500 to-pink-500'
+    },
     { 
       id: 'content', 
       name: 'Content Generator', 
@@ -706,12 +945,12 @@ const AITools = () => {
         <h1 className="heading-1 mb-4">AI-Powered Tools</h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
           Leverage the power of artificial intelligence to create content, generate images, 
-          and get business insights that help your business grow.
+          create video reels, and get business insights that help your business grow.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -743,6 +982,12 @@ const AITools = () => {
 
       {/* Tab Content */}
       <div className="min-h-[600px]">
+        {activeTab === 'reels' && (
+          <AutoReelGenerator
+            loading={loading}
+            setLoading={setLoading}
+          />
+        )}
         {activeTab === 'content' && <ContentGenerator />}
         {activeTab === 'images' && <ImageGenerator />}
         {activeTab === 'suggestions' && (

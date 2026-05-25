@@ -266,13 +266,14 @@ class NetlifyService:
     def create_data_collection_website(self, title, description, content, business_id=None, netlify_site_name=None):
         """Create a website with integrated data collection forms (FINAL FIXED VERSION)"""
         try:
-            # FORCE load the enhanced template with absolute path
-            enhanced_template_path = r"C:\Users\sreen\OneDrive\Documents\Python Scripts\break-even\netlify-functions\enhanced-mini-website-template.html"
+            # Resolve template path relative to the project root (backend/../netlify-functions/)
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+            enhanced_template_path = os.path.join(project_root, 'netlify-functions', 'enhanced-mini-website-template.html')
             
             print(f"🚀 Loading enhanced template from: {enhanced_template_path}")
             
             if not os.path.exists(enhanced_template_path):
-                print(f"❌ Enhanced template not found, using fallback")
+                print(f"❌ Enhanced template not found at {enhanced_template_path}, using fallback")
                 # Use the fixed template content directly
                 template = self.get_fixed_enhanced_template()
             else:
