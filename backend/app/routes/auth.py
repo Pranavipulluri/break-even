@@ -52,14 +52,18 @@ def register():
         user_data['password_hash'] = user.password_hash
         
         result = mongo.db.users.insert_one(user_data)
+        user_id = str(result.inserted_id)
         
         # Create access token
-        access_token = create_access_token(identity=str(result.inserted_id))
+        access_token = create_access_token(identity=user_id)
+        
+        response_user = user.to_dict()
+        response_user['_id'] = user_id
         
         return jsonify({
             'message': 'User registered successfully',
             'token': access_token,
-            'user': user.to_dict()
+            'user': response_user
         }), 201
         
     except Exception as e:
@@ -89,12 +93,16 @@ def login():
         if not user.check_password(password):
             return jsonify({'error': 'Invalid credentials'}), 401
          # Create access token
-        access_token = create_access_token(identity=str(user_data['_id']))
+        user_id = str(user_data['_id'])
+        access_token = create_access_token(identity=user_id)
+        
+        response_user = user.to_dict()
+        response_user['_id'] = user_id
         
         return jsonify({
             'message': 'Login successful',
             'token': access_token,
-            'user': user.to_dict()
+            'user': response_user
         }), 200
         
     except Exception as e:
@@ -111,7 +119,9 @@ def verify_token():
             return jsonify({'error': 'User not found'}), 404
         
         user = User.from_dict(user_data)
-        return jsonify({'user': user.to_dict()}), 200
+        response_user = user.to_dict()
+        response_user['_id'] = current_user_id
+        return jsonify({'user': response_user}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -169,9 +179,11 @@ def google_auth():
             result = mongo.db.users.insert_one(user_dict)
             user_id = str(result.inserted_id)
             registered_user = user.to_dict()
+            registered_user['_id'] = user_id
         else:
             user_id = str(user_data['_id'])
             registered_user = User.from_dict(user_data).to_dict()
+            registered_user['_id'] = user_id
             
         # Create access token
         access_token = create_access_token(identity=user_id)
@@ -238,9 +250,11 @@ def microsoft_auth():
             result = mongo.db.users.insert_one(user_dict)
             user_id = str(result.inserted_id)
             registered_user = user.to_dict()
+            registered_user['_id'] = user_id
         else:
             user_id = str(user_data['_id'])
             registered_user = User.from_dict(user_data).to_dict()
+            registered_user['_id'] = user_id
             
         # Create access token
         access_token_jwt = create_access_token(identity=user_id)
