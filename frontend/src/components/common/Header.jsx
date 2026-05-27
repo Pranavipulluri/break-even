@@ -1,7 +1,7 @@
 import { Bell, LogOut, MessageCircle, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useTranslation } from '../../contexts/TranslationContext';
+import { useTranslation } from '../../context/TranslationContext';
 import AIBusinessChatbot from '../AIBusinessChatbot';
 import LanguageSelector from '../LanguageSelector';
 

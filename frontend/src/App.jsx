@@ -5,7 +5,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import AICopilotDrawer from './components/AICopilotDrawer';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { TranslationProvider } from './contexts/TranslationContext';
+import { TranslationProvider } from './context/TranslationContext';
 import AITestPage from './pages/AITestPage';
 import AITools from './pages/AITools';
 import Analytics from './pages/Analytics';

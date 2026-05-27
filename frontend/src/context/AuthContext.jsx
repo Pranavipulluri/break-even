@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const userData = await authService.verifyToken(token);
-          setUser(userData);
+          setUser(userData.user || userData);
         } catch (error) {
           localStorage.removeItem('token');
         }
@@ -51,10 +51,26 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  const googleLogin = async (idToken) => {
+    const response = await authService.googleLogin(idToken);
+    setUser(response.user);
+    localStorage.setItem('token', response.token);
+    return response;
+  };
+
+  const microsoftLogin = async (accessToken) => {
+    const response = await authService.microsoftLogin(accessToken);
+    setUser(response.user);
+    localStorage.setItem('token', response.token);
+    return response;
+  };
+
   const value = {
     user,
     login,
     register,
+    googleLogin,
+    microsoftLogin,
     logout,
     loading
   };

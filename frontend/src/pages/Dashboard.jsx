@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Users, ShoppingCart, DollarSign, Eye, MessageSquare, QrCode, Zap, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, Users, ShoppingCart, DollarSign, Eye, MessageSquare, QrCode, Zap, ArrowUp, ArrowDown, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
@@ -11,8 +11,12 @@ const Dashboard = () => {
     totalSales: 0,
     totalCustomers: 0,
     totalProducts: 0,
+    totalMessages: 0,
+    totalScans: 0,
     monthlyRevenue: 0
   });
+  const [recentActivity, setRecentActivity] = useState({ messages: [], customers: [] });
+  const [chartData, setChartData] = useState([]);
   const [timeframe, setTimeframe] = useState('7d');
   const [loading, setLoading] = useState(true);
 
@@ -24,8 +28,28 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await api.get(`/dashboard?timeframe=${timeframe}`);
-      setStats(response.data.stats);
-      dispatch({ type: 'SET_ANALYTICS', payload: response.data.analytics });
+      const data = response.data;
+
+      setStats(data.stats || {
+        totalSales: 0,
+        totalCustomers: 0,
+        totalProducts: 0,
+        totalMessages: 0,
+        totalScans: 0,
+        monthlyRevenue: 0
+      });
+
+      // Use real analytics data for charts
+      if (data.analytics && data.analytics.length > 0) {
+        setChartData(data.analytics);
+      } else {
+        setChartData([]);
+      }
+
+      // Use real recent activity
+      setRecentActivity(data.recentActivity || { messages: [], customers: [] });
+
+      dispatch({ type: 'SET_ANALYTICS', payload: data.analytics });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -33,21 +57,88 @@ const Dashboard = () => {
     }
   };
 
-  const salesData = [
-    { name: 'Mon', sales: 4000, revenue: 2400, visitors: 240 },
-    { name: 'Tue', sales: 3000, revenue: 1398, visitors: 220 },
-    { name: 'Wed', sales: 2000, revenue: 9800, visitors: 290 },
-    { name: 'Thu', sales: 2780, revenue: 3908, visitors: 200 },
-    { name: 'Fri', sales: 1890, revenue: 4800, visitors: 180 },
-    { name: 'Sat', sales: 2390, revenue: 3800, visitors: 230 },
-    { name: 'Sun', sales: 3490, revenue: 4300, visitors: 210 },
-  ];
+  // Build activity feed from real data
+  const buildActivityFeed = () => {
+    const feed = [];
 
-  const pieData = [
-    { name: 'Online Sales', value: 65, color: '#3b82f6' },
-    { name: 'In-Store', value: 25, color: '#10b981' },
-    { name: 'Phone Orders', value: 10, color: '#f59e0b' },
-  ];
+    if (recentActivity.messages) {
+      recentActivity.messages.forEach(msg => {
+        feed.push({
+          type: 'message',
+          message: `New message from ${msg.customer_name}: ${msg.content}`,
+          time: msg.created_at ? new Date(msg.created_at).toLocaleString() : 'Recently',
+          icon: MessageSquare,
+          color: 'text-blue-500 bg-blue-100'
+        });
+      });
+    }
+
+    if (recentActivity.customers) {
+      recentActivity.customers.forEach(cust => {
+        feed.push({
+          type: 'customer',
+          message: `${cust.name} registered as a new customer`,
+          time: cust.created_at ? new Date(cust.created_at).toLocaleString() : 'Recently',
+          icon: Users,
+          color: 'text-green-500 bg-green-100'
+        });
+      });
+    }
+
+    // Sort by time descending and limit
+    feed.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    if (feed.length === 0) {
+      feed.push({
+        type: 'info',
+        message: 'No recent activity yet. Customer interactions will appear here.',
+        time: 'Just now',
+        icon: Eye,
+        color: 'text-gray-400 bg-gray-100'
+      });
+    }
+
+    return feed.slice(0, 5);
+  };
+
+  // Compute quick stats from real data
+  const computeQuickStats = () => {
+    const totalOrders = stats.totalSales || 0;
+    const revenue = stats.monthlyRevenue || 0;
+    const avgOrderValue = totalOrders > 0 ? (revenue / totalOrders).toFixed(2) : '0.00';
+    const totalCustomers = stats.totalCustomers || 0;
+    const totalMessages = stats.totalMessages || 0;
+    const responseRate = totalMessages > 0 ? Math.min(100, Math.round((totalMessages / Math.max(1, totalCustomers)) * 100)) : 0;
+
+    return [
+      { label: 'Avg. Order Value', value: `$${avgOrderValue}`, change: totalOrders > 0 ? '+active' : 'N/A', positive: true },
+      { label: 'Total Products', value: `${stats.totalProducts || 0}`, change: stats.totalProducts > 0 ? 'In stock' : 'None', positive: stats.totalProducts > 0 },
+      { label: 'Customer Messages', value: `${totalMessages}`, change: totalMessages > 0 ? 'Active' : 'No messages', positive: totalMessages > 0 },
+      { label: 'Response Rate', value: `${responseRate}%`, change: responseRate > 50 ? 'Good' : 'Needs attention', positive: responseRate > 50 },
+    ];
+  };
+
+  // Build pie data from real sources
+  const buildChannelData = () => {
+    const scans = stats.totalScans || 0;
+    const customers = stats.totalCustomers || 0;
+    const messages = stats.totalMessages || 0;
+    const total = scans + customers + messages;
+
+    if (total === 0) {
+      return [
+        { name: 'QR Scans', value: 0, color: '#3b82f6' },
+        { name: 'Customers', value: 0, color: '#10b981' },
+        { name: 'Messages', value: 0, color: '#f59e0b' },
+      ];
+    }
+
+    return [
+      { name: 'QR Scans', value: Math.round((scans / total) * 100) || 0, color: '#3b82f6' },
+      { name: 'Customers', value: Math.round((customers / total) * 100) || 0, color: '#10b981' },
+      { name: 'Messages', value: Math.round((messages / total) * 100) || 0, color: '#f59e0b' },
+    ];
+  };
 
   const MetricCard = ({ title, value, icon: Icon, color, gradient, change, changeType, description, onClick }) => (
     <div 
@@ -135,6 +226,10 @@ const Dashboard = () => {
     );
   }
 
+  const activityFeed = buildActivityFeed();
+  const quickStats = computeQuickStats();
+  const channelData = buildChannelData();
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -172,38 +267,34 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Revenue"
-          value={`$${stats.monthlyRevenue.toLocaleString()}`}
+          value={`$${(stats.monthlyRevenue || 0).toLocaleString()}`}
           icon={DollarSign}
           color="bg-green-500"
           gradient="from-green-500 to-emerald-600"
-          change={12.5}
           description="From all sales channels"
         />
         <MetricCard
-          title="New Customers"
-          value={stats.totalCustomers}
+          title="Customers"
+          value={stats.totalCustomers || 0}
           icon={Users}
           color="bg-blue-500"
           gradient="from-blue-500 to-indigo-600"
-          change={8.2}
-          description="Registered this period"
+          description="Registered customers"
         />
         <MetricCard
-          title="Total Orders"
-          value={stats.totalSales}
+          title="Total Products"
+          value={stats.totalProducts || 0}
           icon={ShoppingCart}
           color="bg-purple-500"
           gradient="from-purple-500 to-pink-600"
-          change={-2.1}
-          description="Across all channels"
+          description="Active products"
         />
         <MetricCard
           title="QR Scans"
-          value="1.2K"
+          value={(stats.totalScans || 0).toLocaleString()}
           icon={QrCode}
           color="bg-orange-500"
           gradient="from-orange-500 to-red-600"
-          change={15.3}
           description="Physical to digital"
         />
       </div>
@@ -221,97 +312,120 @@ const Dashboard = () => {
               </>
             }
           >
-            <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={salesData}>
-                <defs>
-                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
-                    fontSize: '14px'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3}
-                  fill="url(#salesGradient)"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  fill="url(#revenueGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="sales" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    fill="url(#salesGradient)"
+                    name="Sales"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    fill="url(#revenueGradient)"
+                    name="Revenue ($)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-80 text-gray-400">
+                <div className="text-center">
+                  <BarChart3 size={48} className="mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No sales data available yet.</p>
+                  <p className="text-xs text-gray-400 mt-1">Data will populate as orders come in.</p>
+                </div>
+              </div>
+            )}
           </ChartCard>
         </div>
 
-        {/* Sales Channels Pie Chart */}
-        <ChartCard title="Sales Channels">
-          <ResponsiveContainer width="100%" height={320}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+        {/* Engagement Channels Pie Chart */}
+        <ChartCard title="Engagement Channels">
+          {(channelData.reduce((sum, d) => sum + d.value, 0)) > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={channelData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {channelData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              <div className="mt-4 space-y-2">
+                {channelData.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: item.color }}></div>
+                      <span className="text-sm text-gray-600">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">{item.value}%</span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          
-          <div className="mt-4 space-y-2">
-            {pieData.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: item.color }}></div>
-                  <span className="text-sm text-gray-600">{item.name}</span>
-                </div>
-                <span className="text-sm font-semibold text-gray-900">{item.value}%</span>
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-80 text-gray-400">
+              <div className="text-center">
+                <Eye size={48} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No engagement data yet.</p>
+              </div>
+            </div>
+          )}
         </ChartCard>
       </div>
 
@@ -320,36 +434,7 @@ const Dashboard = () => {
         {/* Recent Activity */}
         <ChartCard title="Recent Activity">
           <div className="space-y-4">
-            {[
-              { 
-                type: 'message', 
-                message: 'New message from Sarah Johnson about Premium Service', 
-                time: '2 minutes ago',
-                icon: MessageSquare,
-                color: 'text-blue-500 bg-blue-100'
-              },
-              { 
-                type: 'customer', 
-                message: 'John Doe registered as a new customer', 
-                time: '15 minutes ago',
-                icon: Users,
-                color: 'text-green-500 bg-green-100'
-              },
-              { 
-                type: 'scan', 
-                message: 'QR code scanned 3 times at Main Street location', 
-                time: '1 hour ago',
-                icon: QrCode,
-                color: 'text-orange-500 bg-orange-100'
-              },
-              { 
-                type: 'sale', 
-                message: 'Order #1234 completed - $299.99', 
-                time: '2 hours ago',
-                icon: ShoppingCart,
-                color: 'text-purple-500 bg-purple-100'
-              },
-            ].map((activity, index) => (
+            {activityFeed.map((activity, index) => (
               <div key={index} className="flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
                 <div className={`p-2 rounded-xl ${activity.color} group-hover:scale-110 transition-transform`}>
                   <activity.icon size={16} />
@@ -366,12 +451,7 @@ const Dashboard = () => {
         {/* Quick Stats */}
         <ChartCard title="Quick Stats">
           <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: 'Avg. Order Value', value: '$127.50', change: '+12%', positive: true },
-              { label: 'Conversion Rate', value: '3.2%', change: '+0.8%', positive: true },
-              { label: 'Customer Satisfaction', value: '4.8/5', change: '+0.2', positive: true },
-              { label: 'Response Time', value: '2.3h', change: '-0.5h', positive: true },
-            ].map((stat, index) => (
+            {quickStats.map((stat, index) => (
               <div key={index} className="p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</span>

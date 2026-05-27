@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import WebsitePreview from '../components/website/WebsitePreview';
-import { useTranslation } from '../contexts/TranslationContext';
+import { useTranslation } from '../context/TranslationContext';
 import { api } from '../services/api';
 
 // Debug auth in development

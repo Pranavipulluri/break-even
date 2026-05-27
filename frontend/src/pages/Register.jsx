@@ -9,10 +9,46 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { user, register: registerUser } = useAuth();
+  const { user, register: registerUser, googleLogin, microsoftLogin } = useAuth();
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const password = watch('password');
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const email = prompt("Enter mock Google email:", "google.user@example.com");
+      if (!email) return;
+      const name = prompt("Enter mock Google display name:", "Google User");
+      if (!name) return;
+
+      const mockToken = `mock_google_${name.replace(/\s+/g, '')}_${email}`;
+      await googleLogin(mockToken);
+      toast.success('Welcome! Registered with Google 🎉');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Google Sign up failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    try {
+      setLoading(true);
+      const email = prompt("Enter mock Microsoft email:", "ms.user@example.com");
+      if (!email) return;
+      const name = prompt("Enter mock Microsoft display name:", "Microsoft User");
+      if (!name) return;
+
+      const mockToken = `mock_ms_${name.replace(/\s+/g, '')}_${email}`;
+      await microsoftLogin(mockToken);
+      toast.success('Welcome! Registered with Microsoft 🎉');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Microsoft Sign up failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Redirect if already logged in
   if (user) {
@@ -234,7 +270,11 @@ const Register = () => {
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+              <button 
+                type="button"
+                onClick={handleGoogleSignIn}
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"
@@ -256,11 +296,18 @@ const Register = () => {
                 <span className="ml-2">Google</span>
               </button>
 
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              <button 
+                type="button"
+                onClick={handleMicrosoftSignIn}
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 23 23">
+                  <path fill="#F25022" d="M1.5 1.5h9.25v9.25H1.5z"/>
+                  <path fill="#7FBA00" d="M12.25 1.5H21.5v9.25h-9.25z"/>
+                  <path fill="#00A4EF" d="M1.5 12.25h9.25V21.5H1.5z"/>
+                  <path fill="#FFB900" d="M12.25 12.25H21.5V21.5h-9.25z"/>
                 </svg>
-                <span className="ml-2">Facebook</span>
+                <span className="ml-2">Microsoft</span>
               </button>
             </div>
           </div>

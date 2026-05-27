@@ -450,23 +450,74 @@ class BusinessCopilot:
 
     # PRIORITY 5: Marketing Generator
     def _tools_marketing_generator(self, campaign_name, offer_details):
-        """Creates copy and asset prompts for campaigns."""
+        """Creates high-converting copy and asset prompts for campaigns using Gemini."""
+        prompt = f"""
+        You are the 'MarketingGenerator' AI agent. Your task is to write high-converting copy and design prompts for marketing campaigns.
+
+        Campaign Name: {campaign_name}
+        Offer Details: {offer_details}
+
+        Generate a campaign email subject, engaging body copy, and a visual generation prompt for a matching cover image.
+
+        Respond with ONLY a clean JSON block:
+        {{
+            "campaign_subject": "A catchy, urgent, high-converting subject line",
+            "copy": "Engaging, professional copy for an email/social post detailing the offer, benefits, and call to action.",
+            "visual_asset_prompt": "A detailed text prompt for generating a beautiful, professional, matching visual cover image for this campaign."
+        }}
+        """
+        api_key = current_app.config.get("GEMINI_API_KEY")
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                res = model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.7,
+                        response_mime_type="application/json",
+                    ),
+                )
+                data = json.loads(res.text.strip())
+                return data
+            except Exception as e:
+                logger.error(f"Gemini marketing copy generation failed: {e}. Using fallback.")
+
+        # Fallback template
         return {
-            "campaign_subject": f"Special Offer: {campaign_name}",
-            "copy": f"Hello! Indulge in our latest premium wellness deals: {offer_details}. Spot bookings are limited. Book online today!",
-            "visual_asset_prompt": "Beautiful flat lay spa elements, soft pink towels, gold accent bowl, organic green leaves, soft studio lighting.",
+            "campaign_subject": f"Exclusive Access: {campaign_name} 🌟",
+            "copy": f"Hello! We are excited to announce our brand new offer: {offer_details}. We want to provide you with the absolute best experience. Don't wait — spots are filling up fast! Click here to secure your booking today.",
+            "visual_asset_prompt": f"Professional branding cover for {campaign_name}, organic styling, clean background, modern business aesthetic, high quality studio lighting.",
         }
 
     # PRIORITY 6: CRM Analyzer
     def _tools_crm_analyzer(self):
         """Queries VIP bookings and customer communication statistics."""
         b_id_str = str(self.business_id)
-        clients = list(mongo.db.clients.find({"salon_id": b_id_str}).limit(5))
-        for c in clients:
-            c.pop("_id", None)
+        # Query child_customers instead of clients
+        customers = list(mongo.db.child_customers.find({"business_owner_id": b_id_str}).limit(10))
+        recent_clients = []
+        for c in customers:
+            recent_clients.append({
+                "name": c.get("name", "Valued Customer"),
+                "email": c.get("email", ""),
+                "phone": c.get("phone", ""),
+                "is_subscribed": c.get("is_subscribed", False)
+            })
+
+        # Calculate average feedback rating from customer_feedback
+        feedback_cursor = mongo.db.customer_feedback.find({"business_owner_id": b_id_str})
+        feedback_list = list(feedback_cursor)
+        
+        rating_score = 4.8  # Default high score
+        if feedback_list:
+            ratings = [float(f.get("rating", 5)) for f in feedback_list if f.get("rating") is not None]
+            if ratings:
+                rating_score = round(sum(ratings) / len(ratings), 1)
 
         return {
-            "recent_clients": clients,
-            "vip_segments": len(clients),
-            "customer_satisfaction_score": 4.8,
+            "recent_clients": recent_clients,
+            "total_customers": mongo.db.child_customers.count_documents({"business_owner_id": b_id_str}),
+            "vip_segments": len([c for c in recent_clients if c.get("is_subscribed")]),
+            "customer_satisfaction_score": rating_score,
         }

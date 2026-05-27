@@ -135,15 +135,83 @@ class BusinessMemory:
     @classmethod
     def retrieve_relevant_memory(cls, business_id, query_phrase, limit=3):
         """
-        Queries RAG memory for previous high-performing layouts and patches.
-        Uses local numpy cosine similarity by default, integrates Atlas Vector Search
-        when available.
+        Uses MongoDB Atlas Vector Search if available, falling back to local
+        NumPy-based cosine similarity computation if unsupported/index missing.
         """
         try:
             b_id_str = str(business_id)
             query_vector = np.array(cls._get_embedding(query_phrase))
 
-            # Fetch memories for this business, then global benchmarks
+            # Try MongoDB Atlas Vector Search
+            try:
+                # Stage 1: Business-specific Vector Search
+                pipeline = [
+                    {
+                        "$vectorSearch": {
+                            "index": "vector_index",
+                            "path": "vector",
+                            "queryVector": query_vector.tolist(),
+                            "numCandidates": limit * 10,
+                            "limit": limit,
+                            "filter": {"business_id": {"$eq": b_id_str}}
+                        }
+                    },
+                    {
+                        "$addFields": {
+                            "similarity_score": {"$meta": "vectorSearchScore"}
+                        }
+                    },
+                    {
+                        "$project": {
+                            "vector": 0
+                        }
+                    }
+                ]
+                results = list(mongo.db.business_memory.aggregate(pipeline))
+
+                # If no business-specific memory matches, fall back to global vector search
+                if not results:
+                    pipeline_global = [
+                        {
+                            "$vectorSearch": {
+                                "index": "vector_index",
+                                "path": "vector",
+                                "queryVector": query_vector.tolist(),
+                                "numCandidates": limit * 10,
+                                "limit": limit
+                            }
+                        },
+                        {
+                            "$addFields": {
+                                "similarity_score": {"$meta": "vectorSearchScore"}
+                            }
+                        },
+                        {
+                            "$project": {
+                                "vector": 0
+                            }
+                        }
+                    ]
+                    results = list(mongo.db.business_memory.aggregate(pipeline_global))
+
+                if results:
+                    formatted_results = []
+                    for doc in results:
+                        doc.pop("_id", None)
+                        doc["similarity_score"] = round(float(doc.get("similarity_score", 1.0)), 4)
+                        formatted_results.append(doc)
+                    
+                    logger.info(f"MongoDB Atlas Vector Search successful: returned {len(formatted_results)} memories")
+                    return formatted_results
+
+            except Exception as atlas_err:
+                logger.info(
+                    f"Atlas Vector Search failed/unsupported ({atlas_err}). "
+                    "Falling back to local NumPy-based similarity computation."
+                )
+
+            # --- Fallback: Local NumPy Cosine Similarity Search ---
+            # Fetch memories for this business, then global benchmarks if empty
             cursor = mongo.db.business_memory.find({"business_id": b_id_str})
             memories = list(cursor)
 
@@ -183,7 +251,7 @@ class BusinessMemory:
                 mem["similarity_score"] = round(score, 4)
                 results.append(mem)
 
-            logger.info(f"RAG search returned {len(results)} memories for query '{query_phrase[:60]}...'")
+            logger.info(f"RAG search (NumPy fallback) returned {len(results)} memories for query '{query_phrase[:60]}...'")
             return results
         except Exception as e:
             logger.error(f"Error searching RAG business memory: {e}")

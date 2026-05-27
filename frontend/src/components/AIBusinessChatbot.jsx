@@ -1,10 +1,10 @@
 import { Bot, Maximize2, Minimize2, Send, User, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useTranslation } from '../contexts/TranslationContext';
+import { useTranslation } from '../context/TranslationContext';
 
 const AIBusinessChatbot = ({ isOpen, onClose }) => {
-  const { translate, currentLanguage } = useTranslation();
+  const { t: translate, currentLanguage } = useTranslation();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');

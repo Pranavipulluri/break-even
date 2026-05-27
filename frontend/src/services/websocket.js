@@ -14,7 +14,7 @@ class WebSocketService {
       return;
     }
 
-    const serverUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const serverUrl = process.env.REACT_APP_WEBSOCKET_URL || 'http://localhost:5000';
     
     this.socket = io(serverUrl, {
       auth: {
