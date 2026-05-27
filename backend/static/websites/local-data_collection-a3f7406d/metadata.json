@@ -1,0 +1,14 @@
+{
+  "title": "pranavifarms",
+  "description": "Join the pranavifarms community and share your valuable feedback with us.",
+  "content": "Welcome to pranavifarms! We're building something amazing and we'd love to have you as part of our journey. Sign up to stay updated and let us know what you think.",
+  "website_type": "data_collection",
+  "business_id": null,
+  "created_at": "2026-05-27T17:08:16.753351",
+  "local_deployment": true,
+  "features": [
+    "user_registration",
+    "feedback_collection",
+    "data_analytics"
+  ]
+}

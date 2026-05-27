@@ -150,7 +150,13 @@ const QRCode = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Conversion Rate</p>
-              <p className="text-3xl font-bold">12.5%</p>
+              <p className="text-3xl font-bold">
+                {qrData === null
+                  ? '—'
+                  : qrData.totalScans > 0
+                    ? `${((qrData.scansToday / qrData.totalScans) * 100).toFixed(1)}%`
+                    : '—'}
+              </p>
             </div>
             <Zap className="text-purple-200" size={32} />
           </div>

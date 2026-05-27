@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pranavifarms</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .form {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .form input {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .form button {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>pranavifarms</h1>
+        <p>Join the pranavifarms community and share your valuable feedback with us.</p>
+        <p>Welcome to pranavifarms! We're building something amazing and we'd love to have you as part of our journey. Sign up to stay updated and let us know what you think.</p>
+        
+        <div class="form">
+            <h3>Join Our Community</h3>
+            <input type="text" placeholder="Your Name" id="userName">
+            <input type="email" placeholder="Your Email" id="userEmail">
+            <textarea placeholder="Your Feedback" id="userFeedback" style="width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 3px; height: 80px; resize: vertical;"></textarea>
+            <button onclick="submitFeedback()">Submit Feedback</button>
+        </div>
+        
+        <div class="status">
+            <strong>🚀 Website Status:</strong> Successfully deployed locally<br>
+            <strong>🌐 Type:</strong> Data Collection<br>
+            <strong>📅 Created:</strong> 2026-05-27 17:08:44 UTC<br>
+            <strong>⚡ Features:</strong> User Registration, Feedback Collection, Data Analytics
+        </div>
+    </div>
+    
+    <script>
+        function submitFeedback() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const feedback = document.getElementById('userFeedback').value;
+            
+            if (!name || !email || !feedback) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Mock submission
+            alert('Thank you for your feedback! (This is a demo submission)');
+            document.getElementById('userName').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userFeedback').value = '';
+        }
+    </script>
+</body>
+</html>

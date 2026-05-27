@@ -14,6 +14,8 @@ const Messages = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('messages'); // messages, consultations
   const [consultations, setConsultations] = useState([]);
+  const [loadingConsultations, setLoadingConsultations] = useState(false);
+  const [errorConsultations, setErrorConsultations] = useState(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
@@ -29,70 +31,6 @@ const Messages = () => {
     }
   }, [currentPage, filter, activeTab]);
 
-  // Mock consultation data
-  const mockConsultations = [
-    {
-      id: 1,
-      clientName: 'John Smith',
-      clientEmail: 'john.smith@email.com',
-      clientPhone: '+91 98765 43210',
-      practiceArea: 'Corporate Law',
-      caseDescription: 'Need assistance with business incorporation and compliance matters for a tech startup.',
-      preferredDate: '2024-10-15',
-      preferredTime: '10:00 AM',
-      urgencyLevel: 'medium',
-      status: 'pending',
-      createdAt: '2024-10-10T09:30:00Z',
-      isExistingCase: false,
-      budgetRange: '$5000-$10000'
-    },
-    {
-      id: 2,
-      clientName: 'Sarah Johnson',
-      clientEmail: 'sarah.j@email.com',
-      clientPhone: '+91 98765 43211',
-      practiceArea: 'Family Law',
-      caseDescription: 'Divorce proceedings and child custody arrangements. Need immediate consultation.',
-      preferredDate: '2024-10-12',
-      preferredTime: '2:00 PM',
-      urgencyLevel: 'high',
-      status: 'confirmed',
-      createdAt: '2024-10-09T14:20:00Z',
-      isExistingCase: true,
-      budgetRange: '$3000-$5000'
-    },
-    {
-      id: 3,
-      clientName: 'Michael Brown',
-      clientEmail: 'michael.brown@email.com',
-      clientPhone: '+91 98765 43212',
-      practiceArea: 'Real Estate Law',
-      caseDescription: 'Property purchase agreement review and contract negotiation assistance.',
-      preferredDate: '2024-10-18',
-      preferredTime: '11:30 AM',
-      urgencyLevel: 'low',
-      status: 'pending',
-      createdAt: '2024-10-11T11:15:00Z',
-      isExistingCase: false,
-      budgetRange: '$2000-$3000'
-    },
-    {
-      id: 4,
-      clientName: 'Emily Davis',
-      clientEmail: 'emily.davis@email.com',
-      clientPhone: '+91 98765 43213',
-      practiceArea: 'Employment Law',
-      caseDescription: 'Wrongful termination case. Need consultation about employment rights and legal options.',
-      preferredDate: '2024-10-14',
-      preferredTime: '3:30 PM',
-      urgencyLevel: 'medium',
-      status: 'cancelled',
-      createdAt: '2024-10-08T16:45:00Z',
-      isExistingCase: false,
-      budgetRange: '$1500-$3000'
-    }
-  ];
-
   const fetchMessages = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -106,9 +44,39 @@ const Messages = () => {
     }
   };
 
-  const fetchConsultations = () => {
-    // For now, use mock data
-    setConsultations(mockConsultations);
+  const fetchConsultations = async () => {
+    setLoadingConsultations(true);
+    setErrorConsultations(null);
+    try {
+      const response = await api.get('/bookings/consultations');
+      const raw = response.data.bookings ?? [];
+
+      // Map nested backend shape → flat shape the UI already renders
+      const mapped = raw.map((booking) => ({
+        _id:           booking._id,
+        clientName:    `${booking.client_info?.first_name ?? ''} ${booking.client_info?.last_name ?? ''}`.trim() || 'Unknown Client',
+        email:         booking.client_info?.email ?? '',
+        phone:         booking.client_info?.phone ?? '',
+        practiceArea:  booking.consultation_details?.practice_area ?? '',
+        message:       booking.consultation_details?.case_description ?? '',
+        preferredDate: booking.consultation_details?.preferred_date ?? '',
+        preferredTime: booking.consultation_details?.preferred_time ?? '',
+        urgencyLevel:  booking.consultation_details?.urgency_level ?? 'medium',
+        isExistingCase: booking.consultation_details?.is_existing_case ?? false,
+        budgetRange:   booking.consultation_details?.budget_range ?? '',
+        status:        booking.status ?? 'pending',
+        createdAt:     booking.created_at,
+        isRead:        booking.is_read ?? false,
+      }));
+
+      setConsultations(mapped);
+    } catch (err) {
+      console.error('Failed to fetch consultations:', err);
+      setErrorConsultations('Failed to load consultations. Please try again.');
+      toast.error('Failed to load consultations');
+    } finally {
+      setLoadingConsultations(false);
+    }
   };
 
   const confirmConsultation = async (consultationId) => {
@@ -374,6 +342,9 @@ const Messages = () => {
             filter={filter}
             confirmConsultation={confirmConsultation}
             cancelConsultation={cancelConsultation}
+            loading={loadingConsultations}
+            error={errorConsultations}
+            onRetry={fetchConsultations}
           />
         </>
       )}
@@ -580,7 +551,7 @@ const MessagesTab = ({ messages, filter, openMessage, openReplyModal, getMessage
 };
 
 // Consultations Tab Component
-const ConsultationsTab = ({ consultations, filter, confirmConsultation, cancelConsultation }) => {
+const ConsultationsTab = ({ consultations, filter, confirmConsultation, cancelConsultation, loading, error, onRetry }) => {
   const filteredConsultations = consultations.filter(consultation => {
     if (filter === 'pending') return consultation.status === 'pending';
     if (filter === 'confirmed') return consultation.status === 'confirmed';
@@ -596,6 +567,42 @@ const ConsultationsTab = ({ consultations, filter, confirmConsultation, cancelCo
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="card space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="p-4 border border-gray-100 rounded-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+            </div>
+            <div className="h-4 w-56 bg-gray-100 rounded animate-pulse" />
+            <div className="h-4 w-48 bg-gray-100 rounded animate-pulse" />
+            <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Error state with retry
+  if (error) {
+    return (
+      <div className="card text-center py-12">
+        <Calendar size={48} className="mx-auto text-red-300 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load consultations</h3>
+        <p className="text-gray-600 mb-4 text-sm">{error}</p>
+        <button
+          onClick={onRetry}
+          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="card">
