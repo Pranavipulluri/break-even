@@ -494,7 +494,6 @@ class BusinessCopilot:
     def _tools_crm_analyzer(self):
         """Queries VIP bookings and customer communication statistics."""
         b_id_str = str(self.business_id)
-        
         # Query child_customers instead of clients
         customers = list(mongo.db.child_customers.find({"business_owner_id": b_id_str}).limit(10))
         recent_clients = []

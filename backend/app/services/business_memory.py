@@ -135,7 +135,6 @@ class BusinessMemory:
     @classmethod
     def retrieve_relevant_memory(cls, business_id, query_phrase, limit=3):
         """
-        Queries RAG memory for previous high-performing layouts and patches.
         Uses MongoDB Atlas Vector Search if available, falling back to local
         NumPy-based cosine similarity computation if unsupported/index missing.
         """

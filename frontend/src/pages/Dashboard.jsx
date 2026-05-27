@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Users, ShoppingCart, DollarSign, Eye, MessageSquare, QrCode, Zap, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, Users, ShoppingCart, DollarSign, Eye, MessageSquare, QrCode, Zap, ArrowUp, ArrowDown, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
@@ -470,8 +470,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-// Import BarChart3 for the empty state
-import { BarChart3 } from 'lucide-react';
 
 export default Dashboard;
