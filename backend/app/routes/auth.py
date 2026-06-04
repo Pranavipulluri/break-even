@@ -69,9 +69,6 @@ def register():
     except Exception as e:
         print(f"Registration error: {str(e)}")  # Log the error
         return jsonify({'error': 'Internal server error during registration'}), 500
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

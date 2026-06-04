@@ -40,7 +40,9 @@ def business_chat():
             user_context.update({
                 'name': user.get('name', 'Business Owner'),
                 'business_type': user.get('business_category', 'General Business'),
-                'business_name': user.get('business_name', user.get('name', 'Business'))
+                'business_name': user.get('business_name', user.get('name', 'Business')),
+                'business_id': str(user['_id']),
+                'user_id': str(user['_id'])
             })
         
         # Get AI response

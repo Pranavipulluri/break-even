@@ -1,265 +1,208 @@
-# 🚀 Break-Even - Small Business Management Platform
+# 🚀 Break-Even - Small Business Management Platform & AI OS
 
-Break-Even is a comprehensive AI-powered platform that helps small business owners create websites, manage their operations, and grow their business through intelligent automation and analytics.
+Break-Even is a comprehensive full-stack platform designed to help small business owners manage their operations, analyze performance, and grow their brand through intelligent automation, analytics, and self-improving AI services.
+
+---
+
+## 🧠 The Intelligence & Memory Backbone: MongoDB (Atlas)
+
+At the core of Break-Even's self-improving architecture lies **MongoDB (Atlas)**. Instead of acting as a simple database wrapper, MongoDB serves as the **persistent contextual intelligence layer** that drives the entire AI agent optimization loop.
+
+```mermaid
+graph TD
+    A[Observe Analytics] -->|MongoDB MCP| B[Retrieve Historical Intelligence]
+    B -->|Atlas Vector Search| C[Compare Past Outcomes]
+    C --> D[Generate Safe Hypothesis]
+    D --> E[Validate Sandbox Locks]
+    E --> F[Deploy & Publish to Netlify]
+    F -->|MongoDB MCP| G[Learn from Results]
+    G -->|Store Memory| A
+```
+
+### How MongoDB MCP Drives the Platform
+
+1. **🧠 RAG Memory Layer**: The AI Copilot queries historical optimization memories, searches successful layouts, and identifies conversion-improving patterns (e.g., *"Spa websites with CTA above fold improved bookings by 18%"*) directly through MongoDB MCP.
+2. **📊 Business Analytics Retrieval**: The orchestrator retrieves sales statistics, QR counter scans, bounce rates, and booking conversion logs via MCP tools to drive metric-grounded optimization.
+3. **🔁 Self-Improving Loop**: MongoDB MCP closes the feedback loop: **Observe → Store Result → Learn → Retrieve Later → Improve Again**. Without this persistent storage layer, the system has no learning memory.
+4. **🧬 Atlas Vector Search**: Drives semantic memory retrieval, similarity searches on layouts, and industry-specific business pattern intelligence.
+5. **❌ Failed Patch Memory**: Records failed optimizations, rejected patches, and low-performing experiments to ensure the agent swarm never repeats a layout mistake.
+6. **🏢 Multi-Business Context Isolation**: Isolates memory contexts by business owner ID and industry (e.g., keeping law firm optimization templates separate from beauty salon treatments).
+7. **🤖 Agent Tool Swarm**: Exposes high-level tools for active agent execution, including:
+   - `query_business_memory()`
+   - `persist_optimization_event()`
+   - `retrieve_conversion_patterns()`
+   - `get_business_metrics()`
+   - `store_failed_patch()`
+   - `search_layout_successes()`
+
+### The MongoDB (Atlas) Difference
+
+* **Without MongoDB MCP**: The system would be a generic, stateless AI builder: **Prompt → Generate → Deploy**.
+* **With MongoDB MCP**: The system becomes a learning operating system: **Observe Analytics → Retrieve Historical Intelligence → Compare Past Outcomes → Generate Safe Hypothesis → Validate → Deploy → Learn From Result**.
+
+---
+
 
 ## ✨ Features
 
-### 🌐 AI-Powered Website Builder
-- **Smart Website Generation**: Describe your business and get a complete website in minutes
-- **QR Code Integration**: Generate QR codes for easy customer access to your website
-- **Mobile Responsive**: All websites automatically work on phones and tablets
-- **Real-time Preview**: See your website before publishing
-- **One-Click Publishing**: Deploy your website instantly
-
 ### 📊 Business Analytics Dashboard
-- **Sales Tracking**: Monitor daily/weekly revenue and order trends
-- **Customer Analytics**: Track customer growth and engagement
-- **Product Insights**: See which products are performing best
-- **QR Code Analytics**: Monitor how many customers scan your codes
-- **Real-time Updates**: Live dashboard with instant data updates
+- **Sales & Revenue Tracking**: Monitor daily, weekly, and monthly revenue trends and order volumes with interactive charts.
+- **Customer Analytics**: Track customer acquisition, retention rates, and active client statistics.
+- **Product Insights**: View performance charts detailing your highest-converting and best-selling products.
+- **QR Code Scan Analytics**: Track customer engagement levels from counter/table scans.
 
-### 🛍️ Product Management
-- **Easy Product Addition**: Add products with images, prices, and descriptions
-- **Inventory Tracking**: Keep track of stock levels
-- **Category Organization**: Organize products by categories
-- **Price Management**: Update prices across all platforms
-- **Low Stock Alerts**: Get notified when inventory is running low
+### 🛍️ Product & Inventory Management
+- **Catalog Management**: Easily add products with descriptions, pricing, inventory levels, and categories.
+- **Inventory Tracking & Alerts**: Keep stock counts accurate with automatic low-stock alerts.
+- **Dynamic Updates**: Changes to products instantly synchronize across your digital storefronts.
 
-### 💬 Customer Communication
-- **Real-time Messaging**: Receive messages from customers instantly
-- **Message Center**: Centralized inbox for all customer communications
-- **Message Types**: Categorize inquiries, orders, and feedback
-- **Quick Replies**: Respond to customers with one click
-- **Customer Profiles**: Track communication history with each customer
+### 💬 Centralized Communication & CRM
+- **Customer Inbox**: A centralized message center to organize inquiries, orders, and customer feedback.
+- **Real-time Messaging**: Send and receive instant replies with customers to streamline communication.
+- **Client Sentiment & Feedback**: Collect feedback and automatically calculate Customer Satisfaction Scores (CSAT).
 
-### 🤖 AI Assistant (Ready for Integration)
-- **Business Tips**: Get personalized business advice
-- **Content Generation**: Create product descriptions and marketing copy
-- **Image Generation**: Create posters and marketing materials
-- **Feedback Analysis**: Understand customer sentiment automatically
+### 🧠 Self-Improving AI Copilot Drawer (RAG Engine)
+- **Reflective Loop Swarm**: Streams live optimization thoughts to the frontend drawer via Socket.IO: `Observe` → `Retrieve (RAG)` → `Analyze` → `Generate Hypothesis` → `Propose Patch` → `Validate (Sandbox)` → `Present`.
+- **Side-by-Side Delta Viewer**: Review layout patch details (before/after) side-by-side before approving and deploying.
+- **Secure Sandbox Locks**: Automated validator testing to prevent script injections or responsive layout breaks.
+- **MongoDB Atlas Vector Search**: Queries vector embeddings of historical layout configurations using Atlas Vector Search with a fast local NumPy-based fallback.
+
+### 🌐 AI Website Builder & Custom Industry Engines
+- **Describe-to-Generate**: Build customized, responsive websites by describing your business in plain English.
+- **Professional Law Firm Engine**: Generates law firm landing pages with attorney bios, practice areas, consultation scheduling, and custom business card downloads.
+- **Spa & Beauty Salon Engine**: Generates luxury spa websites containing service price lists, staff member specializations, and direct booking calendars.
+- **One-Click Netlify Publishing**: Deploys websites instantly to the web via automated Netlify API pipelines.
+
+### 🔑 Authentication & OAuth Security
+- **Unified Sign-in**: Standard username/password registration and login.
+- **Google & Microsoft OAuth**: Seamlessly authenticate via Google or Microsoft accounts.
+- **Developer Mock Sign-in**: Accepts `mock_google_...` or `mock_ms_...` tokens to bypass OAuth APIs for rapid local developer loops.
+
+### 🌐 Dynamic Translation Layer
+- **Multi-lingual Support**: Supports English, Hindi, and Telugu.
+- **Gemini Translation Service**: Translates UI text and deployed website content on-the-fly using the Gemini API.
+- **Optimized Caching**: Stores translated phrases in a local cache for immediate loading speeds.
+
+---
 
 ## 🛠️ Tech Stack
 
-- **React 18** with modern hooks and functional components
-- **Tailwind CSS** for responsive, beautiful styling
-- **Heroicons** for consistent iconography
-- **Recharts** for interactive data visualization
-- **Mock API System** for development (easily replaceable with real backend)
+### Frontend
+- **React 18** (Modern functional components, context states, and hooks)
+- **Tailwind CSS & Vanilla CSS** (Highly premium, responsive glassmorphism styles)
+- **Lucide Icons & Framer Motion** (Clean iconography and micro-animations)
+- **Recharts** (Interactive data visualization graphs)
+- **Socket.IO-Client** (Real-time agent log streaming)
+
+### Backend
+- **Python / Flask** (Secure endpoints, routing, and controller layers)
+- **Flask-SocketIO / Eventlet** (Live thought-streaming socket server)
+- **PyMongo** (MongoDB interaction layer with custom indexing)
+- **Google Generative AI** (Gemini-1.5-flash for hypothesis and translations; text-embedding-001 for vector embedding)
+- **Numpy** (High-speed local mathematical cosine similarity fallback)
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16+ installed on your computer
-- npm or yarn package manager
-- Basic knowledge of React (helpful but not required)
+- Node.js (v18+)
+- Python (v3.9+)
+- MongoDB (running locally or on Atlas)
 
-### Installation
+### Setup & Installation
 
-1. **Create a new React app**
+1. **Clone the Repository**
    ```bash
-   npx create-react-app break-even
+   git clone https://github.com/Pranavipulluri/break-even.git
    cd break-even
    ```
 
-2. **Install required dependencies**
+2. **Database Startup**
+   Start MongoDB locally:
    ```bash
-   npm install @heroicons/react recharts axios qrcode
+   mongod --dbpath "./backend/mongodb_data" --port 27017
    ```
 
-3. **Replace the default App.js**
-   - Copy the Break-Even component code to `src/App.js`
-   - Add the API service file to `src/api.js`
-
-4. **Start the development server**
+3. **Backend Setup**
    ```bash
-   npm start
+   cd backend
+   python -m venv venv
+   source venv/Scripts/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+   Create a `.env` file in `backend/` and add your keys:
+   ```env
+   MONGO_URI=mongodb://localhost:27017/break_even
+   GEMINI_API_KEY=your_gemini_api_key_here
+   NETLIFY_AUTH_TOKEN=your_netlify_token_here
+   ```
+   Start the backend server:
+   ```bash
+   python run.py
    ```
 
-5. **Open your browser**
-   - Navigate to `http://localhost:3000`
-   - You should see the Break-Even dashboard!
+4. **Frontend Setup**
+   ```bash
+   cd ../frontend
+   npm install
+   npm run start:3001
+   ```
+
+5. **Access the App**
+   Open your browser at `http://localhost:3001`.
+
+---
 
 ## 📁 Project Structure
 
 ```
 break-even/
-├── public/
-│   ├── index.html          # Main HTML file
-│   └── favicon.ico         # App icon
-├── src/
-│   ├── App.js              # Main Break-Even component (all features)
-│   ├── api.js              # API service with mock data
-│   ├── index.js            # React entry point
-│   └── index.css           # Basic styles
-├── package.json            # Dependencies and scripts
-└── README.md              # This file
+├── backend/
+│   ├── app/
+│   │   ├── routes/          # Auth, law firm, salon, translation, website routes
+│   │   ├── services/        # Orchestrator, RAG memory, patch engine, validators
+│   │   └── utils/           # Database setup, validators
+│   ├── run.py               # Main Flask & Socket.IO server entry point
+│   ├── requirements.txt     # Python backend dependencies
+│   └── .env                 # Environment secrets (ignored)
+└── frontend/
+    ├── src/
+    │   ├── components/      # UI components (Copilot drawer, chatbot, common headers)
+    │   ├── context/         # Auth, App, and Translation Context Providers
+    │   ├── pages/           # Dashboard, Website Builder, Analytics, Settings
+    │   ├── services/        # Axios APIs, WebSocket service, mock auth helpers
+    │   └── App.jsx          # React app entry router
+    ├── package.json         # Frontend configuration
+    └── postcss.config.js    # Tailwind configuration
 ```
+
+---
 
 ## 🎮 How to Use
 
 ### Dashboard
-- **View Stats**: See your business performance at a glance
-- **Quick Actions**: Access main features with one click
-- **Sales Charts**: Analyze your revenue trends
-- **Recent Activity**: Stay updated with latest customer interactions
+- **View Stats**: Monitor revenue, active customer count, and scan statistics at a glance.
+- **Sales Charts**: Filter and analyze your performance trends over 7 days, 30 days, or a custom timeframe.
+
+### AI Copilot Drawer
+- Click the **AI Copilot** tab on the side of the screen to open the Reflective Optimization loop.
+- Input a goal (e.g., "Optimize my homepage for better conversions") and watch the agent swarm run and present its layout hypothesis, expected impact calculations, and side-by-side patch diff.
+- Approve the patch to instantly deploy the optimized HTML to disk and trigger Netlify publishing.
 
 ### Website Builder
-1. Click "Website Builder" in the sidebar
-2. Describe your business in the text area
-3. Click "Generate Website with AI"
-4. Preview your generated website
-5. Download the QR code for your shop
-6. Print and display the QR code for customers
+- Go to "Website Builder" and select your industry type.
+- Describe your company profile, USP, and offerings.
+- Use **Create Professional Law Firm Website** or **Create Professional Spa Website** to build industry-specific features, deploy to Netlify, and generate downloadable business cards.
 
-### Product Management
-1. Go to "Products" section
-2. Click "Add Product" button
-3. Fill in product details (name, price, category, stock)
-4. Save the product
-5. View all products in the grid layout
-6. Monitor stock levels and update as needed
-
-### Customer Messages
-1. Check "Messages" section for customer inquiries
-2. View message details and customer information
-3. Click "Reply" to respond to customers
-4. Track different types of messages (inquiries, orders, feedback)
-
-### Analytics
-- View detailed sales charts and trends
-- Monitor daily/weekly performance
-- Track order volumes and patterns
-- Analyze business growth over time
-
-## 🔧 API Integration
-
-Currently, the app uses mock data for demonstration. To integrate with a real backend:
-
-### Mock Data (Current)
-```javascript
-// All data is simulated in api.js
-const mockProducts = [...];
-const mockMessages = [...];
-// Easy to understand and modify
-```
-
-### Real API Integration
-```javascript
-// Replace mock functions with real API calls
-const getProducts = async () => {
-  const response = await fetch('/api/products');
-  return response.json();
-};
-```
-
-### Backend Endpoints
-```
-Authentication:
-POST /api/auth/login
-POST /api/auth/register
-
-Business Data:
-GET  /api/dashboard/stats
-GET  /api/products
-POST /api/products
-PUT  /api/products/:id
-
-Communication:
-GET  /api/messages
-POST /api/messages
-POST /api/messages/:id/reply
-
-AI Features (Optional):
-POST /api/ai/generate-website
-POST /api/ai/generate-image
-POST /api/ai/business-tips
-
-QR Codes:
-POST /api/qr/generate
-GET  /api/qr/:id/analytics
-```
-
-## 🌐 Deployment
-
-### Development
-```bash
-npm start  # Runs on http://localhost:3000
-```
-
-### Production Build
-```bash
-npm run build  # Creates optimized build in 'build' folder
-```
-
-### Deployment Options
-
-#### Vercel (Recommended)
-```bash
-npm install -g vercel
-npm run build
-vercel --prod
-```
-
-#### Netlify
-1. Run `npm run build`
-2. Drag the `build` folder to Netlify
-3. Your app is live!
-
-#### GitHub Pages
-```bash
-npm install --save-dev gh-pages
-# Add to package.json scripts:
-"deploy": "gh-pages -d build"
-npm run deploy
-```
-
-
-## 🔮 work flow
-
-### Phase 1 
-- Dashboard with analytics
-- Product management
-- Customer messaging UI
-- Website builder interface
-- QR code generation
-
-### Phase 2 (Backend Integration)
-- Real user authentication
-- Database storage
-- API integration
-- Real-time messaging
-- File uploads
-
-### Phase 3 (AI Features)
-- OpenAI integration for website generation
-- DALL-E for image creation
-- Business advice and tips
-- Automated customer responses
-
-### Phase 4 (Advanced Features)
-- Payment processing (Stripe)
-- Email notifications (SendGrid)
-- SMS alerts (Twilio)
-- Advanced analytics
-- Multi-location support
+---
 
 ## 🤝 Contributing
 
 We welcome contributions! Here's how you can help:
 
 1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Make your changes**
-4. **Test thoroughly**
-5. **Commit your changes**
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-6. **Push to your branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-7. **Open a Pull Request**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**

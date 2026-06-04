@@ -250,6 +250,14 @@ class SchemaRenderer:
 </body>
 </html>
 '''
+        # Inject child→parent analytics tracking snippet
+        try:
+            from app.services.tracking_snippet import TrackingSnippet
+            business_id = schema.get("business_id", "")
+            html = TrackingSnippet.inject(html, business_id=business_id)
+        except Exception as e:
+            logger.warning(f"Could not inject tracking snippet: {e}")
+
         return html
 
     # ================================================================

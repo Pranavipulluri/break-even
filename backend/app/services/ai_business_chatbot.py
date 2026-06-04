@@ -8,6 +8,7 @@ import logging
 import os
 import json
 from datetime import datetime
+from app.services.business_memory import BusinessMemory
 
 logger = logging.getLogger(__name__)
 
@@ -72,11 +73,36 @@ User Context:
                     role = "User" if msg.get('type') == 'user' else "Assistant"
                     conversation_context += f"{role}: {msg.get('content', '')}\n"
 
+            # Query RAG Vector DB memory
+            rag_context = ""
+            business_id = user_context.get('business_id') if user_context else None
+            if business_id:
+                try:
+                    memories = BusinessMemory.retrieve_relevant_memory(business_id, message, limit=3)
+                    if memories:
+                        rag_context = "\nRelevant Business Memory / Industry Benchmarks:\n"
+                        for idx, mem in enumerate(memories):
+                            source = mem.get("source", "own_history")
+                            if source == "industry_benchmark":
+                                desc = mem.get("description", "")
+                                gain = mem.get("expected_conversion_gain", 0)
+                                pattern = mem.get("pattern_name", "")
+                                rag_context += f"[{idx+1}] Industry Benchmark ({pattern}): {desc} (Expected Impact: +{gain}%)\n"
+                            else:
+                                patch = mem.get("patch_name", "optimization_patch")
+                                reason = mem.get("reason", "")
+                                gain = mem.get("conversion_gain", 0)
+                                outcome = mem.get("patch_outcome", "success")
+                                rag_context += f"[{idx+1}] Past Layout Patch ({patch}): {reason}. Outcome: {outcome} (Gain: {gain}%)\n"
+                        rag_context += "\n"
+                except Exception as rag_err:
+                    logger.warning(f"Failed to retrieve RAG memory for chatbot: {rag_err}")
+
             # Create the prompt
             prompt = f"""{self.system_prompt}
 
 {context_info}
-
+{rag_context}
 {conversation_context}
 
 Language: Respond in {self._get_language_name(language)}

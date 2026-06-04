@@ -5,14 +5,15 @@ ONE orchestrator ONLY. Agents do NOT independently coordinate.
 The orchestrator feels: reflective and explainable. NOT autonomous and chaotic.
 
 Reflective Loop:
-    Observe → Retrieve (RAG) → Analyze → Generate Hypothesis
+    Observe → Retrieve (RAG) → Compare Failures → Analyze → Generate Hypothesis
     → Propose Patch → Validate (Sandbox) → Impact Calculator → Present
 
 Socket.IO Event Types for live UI streaming:
     agent:observe, agent:analyze, agent:hypothesis,
     agent:patch_generated, agent:validation_passed,
     agent:awaiting_approval, agent:deployment_started,
-    agent:deployment_completed, agent:error
+    agent:deployment_completed, agent:error,
+    agent:failure_gate
 
 Tool Priority Order:
     1. WebsiteOptimizerTool     — MOST IMPORTANT
@@ -74,7 +75,8 @@ class BusinessCopilot:
     def run_optimization_loop(self, user_command):
         """
         Executes the full reflective loop:
-        Observe → Retrieve → Analyze → Hypothesis → Simulate → Validate → Impact → Present
+        Observe → Retrieve → Compare Failures → Analyze → Hypothesis
+        → Simulate → Validate → Impact → Present
         """
         try:
             # === STEP 1: OBSERVE ===
@@ -114,6 +116,34 @@ class BusinessCopilot:
                 {"memories": relevant_memories},
             )
 
+            # === STEP 2.5: FAILURE COMPARISON GATE ===
+            self.stream_log(
+                "agent:failure_gate", "active",
+                "Scanning known failure patterns to avoid repeating past mistakes...",
+            )
+
+            failure_matches = BusinessMemory.compare_to_failures(
+                self.business_id, user_command, threshold=0.7
+            )
+
+            if failure_matches:
+                failure_summary = "; ".join([
+                    f"'{f.get('patch_name', '?')}' (sim={f.get('similarity_score', 0):.2f}): "
+                    f"{f.get('patch_outcome', '')}"
+                    for f in failure_matches
+                ])
+                self.stream_log(
+                    "agent:failure_gate", "warning",
+                    f"⚠️ Found {len(failure_matches)} similar past failure(s). "
+                    f"Adjusting hypothesis to avoid: {failure_summary}",
+                    {"failure_matches": failure_matches},
+                )
+            else:
+                self.stream_log(
+                    "agent:failure_gate", "success",
+                    "No matching failure patterns detected. Safe to proceed.",
+                )
+
             # === STEP 3: ANALYZE & HYPOTHESIZE ===
             self.stream_log(
                 "agent:hypothesis", "active",
@@ -121,8 +151,16 @@ class BusinessCopilot:
             )
 
             hypothesis = self._generate_reflection_hypothesis(
-                user_command, metrics, active_schema, relevant_memories
+                user_command, metrics, active_schema, relevant_memories,
+                failure_matches=failure_matches,
             )
+
+            # Attach ground-truth metrics so memory records use real baselines
+            hypothesis["before_metrics"] = {
+                "conversion_rate_percentage": metrics.get("conversion_rate_percentage", 0),
+                "engagement_rate_percentage": metrics.get("engagement_rate_percentage", 0),
+                "bounce_rate_percentage": metrics.get("bounce_rate_percentage", 0),
+            }
 
             self.stream_log(
                 "agent:hypothesis", "success",
@@ -150,25 +188,38 @@ class BusinessCopilot:
                 "Executing sandbox locks to prevent responsive breaks, layout corruptions, or script injections...",
             )
 
-            is_valid, err_msg = PatchValidator.validate_patch(active_schema, proposed_patch)
+            # Use the new structured validation report
+            validation_report = PatchValidator.validate_and_report(active_schema, proposed_patch)
 
-            if not is_valid:
+            if not validation_report["valid"]:
+                error_detail = "; ".join(validation_report["errors"])
                 self.stream_log(
                     "agent:error", "error",
-                    f"Sandbox lock triggered! Proposed patch failed layout rules: {err_msg}",
+                    f"Sandbox lock triggered! {error_detail}",
+                    {"validation_report": validation_report},
                 )
                 # Store negative memory so AI learns from failure
                 BusinessMemory.add_failure_memory(
                     self.business_id,
                     proposed_patch.get("action", "unknown"),
                     hypothesis.get("explanation", ""),
-                    err_msg,
+                    error_detail,
+                    patch_json=proposed_patch,
                 )
-                return {"success": False, "error": f"Validation failed: {err_msg}"}
+                return {"success": False, "error": f"Validation failed: {error_detail}"}
+
+            # Stream warnings if any
+            if validation_report.get("warnings"):
+                for warning in validation_report["warnings"]:
+                    self.stream_log(
+                        "agent:validation_passed", "warning",
+                        f"⚠️ Advisory: {warning}",
+                    )
 
             self.stream_log(
                 "agent:validation_passed", "success",
                 "Sandbox tests passed! Component tree and CSS boundaries remain fully responsive.",
+                {"validation_report": validation_report},
             )
 
             # === STEP 6: EXPECTED IMPACT CALCULATOR ===
@@ -182,7 +233,6 @@ class BusinessCopilot:
             )
 
             # === STEP 7: COMPILATION & RESPONSE ===
-            # Build the current vs proposed delta for the drawer UI
             delta = self._build_patch_delta(active_schema, proposed_patch)
 
             final_proposal = {
@@ -195,6 +245,11 @@ class BusinessCopilot:
                 "expected_impact": impact_estimate,
                 "confidence": confidence_score,
                 "delta": delta,
+                "validation_report": validation_report,
+                "failure_gate_result": {
+                    "matches_found": len(failure_matches),
+                    "matches": failure_matches,
+                },
                 "current_schema_version": active_schema.get("schema_version", active_schema.get("version", 1)),
             }
 
@@ -204,6 +259,7 @@ class BusinessCopilot:
                 {"$set": {
                     "proposal": final_proposal,
                     "timestamp": datetime.now(timezone.utc),
+                    "created_at": datetime.now(timezone.utc),
                     "is_applied": False,
                 }},
                 upsert=True,
@@ -220,16 +276,40 @@ class BusinessCopilot:
     # Hypothesis generator (Gemini or fallback)
     # ================================================================
 
-    def _generate_reflection_hypothesis(self, user_command, metrics, active_schema, memories):
+    def _generate_reflection_hypothesis(self, user_command, metrics, active_schema,
+                                         memories, failure_matches=None):
         """
         Uses Gemini to construct a structured optimization hypothesis.
         Falls back to a deterministic template when API is unavailable.
+
+        If failure_matches are provided, the prompt includes instructions
+        to avoid those specific patterns.
         """
-        # Pre-compute sections summary outside the f-string to avoid {{/}} escaping issues
         sections_summary = json.dumps([
-            {"id": s.get("id"), "type": s.get("type"), "variant": s.get("variant")}
+            {
+                "id": s.get("id"),
+                "type": s.get("type"),
+                "variant": s.get("variant"),
+                "content_preview": {
+                    k: (v[:80] + "..." if isinstance(v, str) and len(v) > 80 else v)
+                    for k, v in (s.get("content", {}) or {}).items()
+                    if k in ("title", "subtitle", "cta", "items", "name", "description")
+                } if s.get("content") else {},
+            }
             for s in active_schema.get("sections", [])
-        ])
+        ], default=str)
+
+        # Build failure avoidance context
+        failure_context = ""
+        if failure_matches:
+            failure_context = (
+                "\n\nIMPORTANT — AVOID THESE KNOWN FAILURES:\n"
+                + "\n".join([
+                    f"- FAILED: '{f.get('patch_name')}' — {f.get('patch_outcome', '')}"
+                    for f in failure_matches
+                ])
+                + "\nDo NOT propose changes that resemble these failed patterns."
+            )
 
         prompt = f"""
         You are the 'BusinessCopilot' AI Orchestrator.
@@ -239,6 +319,7 @@ class BusinessCopilot:
         Active Metrics: {json.dumps(metrics)}
         Relevant Memory of past successes: {json.dumps(memories, default=str)}
         Active Schema Sections: {sections_summary}
+        {failure_context}
 
         Formulate an optimization plan.
         Determine what section to modify, what properties to change, and what the expected conversion increase is.
@@ -282,17 +363,61 @@ class BusinessCopilot:
             return self._fallback_hypothesis(user_command)
 
     def _fallback_hypothesis(self, user_command):
+        """Vertical-aware deterministic fallback when Gemini is unavailable."""
+        # Look up the tenant's industry from child_websites
+        industry = "general"
+        try:
+            site_doc = mongo.db.child_websites.find_one(
+                {"owner_id": self.business_id}, {"industry_type": 1}
+            )
+            if site_doc:
+                industry = site_doc.get("industry_type", "general")
+        except Exception as e:
+            logger.warning(f"Could not look up industry for fallback: {e}")
+
+        # Vertical-specific copy
+        copy_map = {
+            "beauty_salon": {
+                "title": "Luxurious Healing & Rejuvenation Rituals",
+                "cta": "Reserve Priority Slot Now",
+                "hypothesis": "Moving the booking call-to-action closer to the fold will decrease bounce rates for salon visitors.",
+            },
+            "spa": {
+                "title": "Luxurious Healing & Rejuvenation Rituals",
+                "cta": "Reserve Priority Slot Now",
+                "hypothesis": "Moving the booking call-to-action closer to the fold will decrease bounce rates for spa visitors.",
+            },
+            "law_firm": {
+                "title": "Expert Legal Advice & Corporate Advocacy",
+                "cta": "Schedule A Consultation",
+                "hypothesis": "Adding a prominent consultation CTA above the fold will improve lead conversion for legal prospects.",
+            },
+            "legal": {
+                "title": "Expert Legal Advice & Corporate Advocacy",
+                "cta": "Schedule A Consultation",
+                "hypothesis": "Adding a prominent consultation CTA above the fold will improve lead conversion for legal prospects.",
+            },
+        }
+
+        default_copy = {
+            "title": "Scale Your Business with Data-Driven Solutions",
+            "cta": "Get Started Free",
+            "hypothesis": "Elevating the primary call-to-action above the fold will increase engagement and reduce bounce rates.",
+        }
+
+        copy = copy_map.get(industry, default_copy)
+
         return {
             "target_section_id": "hero_1",
-            "explanation": f"Grounded in low conversions. Enhancing layout for user command: '{user_command}'.",
-            "hypothesis": "Moving the booking call-to-action closer to the fold will decrease bounce rates.",
+            "explanation": f"Grounded in low conversions ({industry} vertical). Enhancing layout for user command: '{user_command}'.",
+            "hypothesis": copy["hypothesis"],
             "action_type": "update_section",
             "expected_impact": "+18% Conversion Increase",
             "confidence": 82,
             "recommended_changes": {
                 "content": {
-                    "title": "Luxurious Healing & Rejuvenation Rituals",
-                    "cta": "Reserve Priority Slot Now",
+                    "title": copy["title"],
+                    "cta": copy["cta"],
                 },
             },
         }
@@ -417,9 +542,12 @@ class BusinessCopilot:
             },
         }, "Standard hero enhancement applied."
 
-    # PRIORITY 2: Analytics Interpreter
+    # PRIORITY 2: Analytics Interpreter — NOW includes real event data
     def _tools_analytics_interpreter(self):
-        """Aggregates QR scans, appointments, orders, and conversion metrics."""
+        """
+        Aggregates QR scans, appointments, orders, conversion metrics,
+        AND real child website engagement events from the event collector.
+        """
         b_id_str = str(self.business_id)
 
         total_scans = mongo.db.qr_scans.count_documents({"business_id": b_id_str})
@@ -430,13 +558,47 @@ class BusinessCopilot:
         if total_scans > 0:
             conversion_rate = round(((total_appointments + total_orders) / total_scans) * 100, 1)
 
+        # Real engagement data from the Event Collector
+        real_engagement = {
+            "page_views": 0,
+            "cta_clicks": 0,
+            "booking_clicks": 0,
+            "bounces": 0,
+            "bounce_rate": 0.0,
+            "cta_click_rate": 0.0,
+            "booking_conversion_rate": 0.0,
+        }
+        try:
+            from app.services.event_collector import event_collector
+            summary = event_collector.get_event_summary(b_id_str, days=7)
+            real_engagement = {
+                "page_views": summary.get("page_view", 0),
+                "cta_clicks": summary.get("cta_click", 0),
+                "booking_clicks": summary.get("booking_click", 0),
+                "bounces": summary.get("bounce", 0),
+                "bounce_rate": summary.get("bounce_rate", 0.0),
+                "cta_click_rate": summary.get("cta_click_rate", 0.0),
+                "booking_conversion_rate": summary.get("booking_conversion_rate", 0.0),
+            }
+        except Exception as e:
+            logger.warning(f"Could not fetch event collector data: {e}")
+
+        # Merge real data if available; otherwise fall back to estimates
+        effective_bounce_rate = (
+            real_engagement["bounce_rate"]
+            if real_engagement["page_views"] > 0
+            else 52.4
+        )
+        effective_engagement_rate = round(100 - effective_bounce_rate, 1)
+
         return {
             "qr_scans": total_scans,
             "appointments": total_appointments,
             "orders": total_orders,
             "conversion_rate_percentage": conversion_rate if conversion_rate > 0 else 4.8,
-            "bounce_rate_percentage": 52.4,
-            "engagement_rate_percentage": 47.6,
+            "bounce_rate_percentage": effective_bounce_rate,
+            "engagement_rate_percentage": effective_engagement_rate,
+            "real_engagement": real_engagement,
         }
 
     # PRIORITY 3: Deployment Tool
@@ -494,7 +656,6 @@ class BusinessCopilot:
     def _tools_crm_analyzer(self):
         """Queries VIP bookings and customer communication statistics."""
         b_id_str = str(self.business_id)
-        # Query child_customers instead of clients
         customers = list(mongo.db.child_customers.find({"business_owner_id": b_id_str}).limit(10))
         recent_clients = []
         for c in customers:
@@ -505,11 +666,10 @@ class BusinessCopilot:
                 "is_subscribed": c.get("is_subscribed", False)
             })
 
-        # Calculate average feedback rating from customer_feedback
         feedback_cursor = mongo.db.customer_feedback.find({"business_owner_id": b_id_str})
         feedback_list = list(feedback_cursor)
-        
-        rating_score = 4.8  # Default high score
+
+        rating_score = 4.8
         if feedback_list:
             ratings = [float(f.get("rating", 5)) for f in feedback_list if f.get("rating") is not None]
             if ratings:

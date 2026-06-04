@@ -29,69 +29,6 @@ const Messages = () => {
     }
   }, [currentPage, filter, activeTab]);
 
-  // Mock consultation data
-  const mockConsultations = [
-    {
-      id: 1,
-      clientName: 'John Smith',
-      clientEmail: 'john.smith@email.com',
-      clientPhone: '+91 98765 43210',
-      practiceArea: 'Corporate Law',
-      caseDescription: 'Need assistance with business incorporation and compliance matters for a tech startup.',
-      preferredDate: '2024-10-15',
-      preferredTime: '10:00 AM',
-      urgencyLevel: 'medium',
-      status: 'pending',
-      createdAt: '2024-10-10T09:30:00Z',
-      isExistingCase: false,
-      budgetRange: '$5000-$10000'
-    },
-    {
-      id: 2,
-      clientName: 'Sarah Johnson',
-      clientEmail: 'sarah.j@email.com',
-      clientPhone: '+91 98765 43211',
-      practiceArea: 'Family Law',
-      caseDescription: 'Divorce proceedings and child custody arrangements. Need immediate consultation.',
-      preferredDate: '2024-10-12',
-      preferredTime: '2:00 PM',
-      urgencyLevel: 'high',
-      status: 'confirmed',
-      createdAt: '2024-10-09T14:20:00Z',
-      isExistingCase: true,
-      budgetRange: '$3000-$5000'
-    },
-    {
-      id: 3,
-      clientName: 'Michael Brown',
-      clientEmail: 'michael.brown@email.com',
-      clientPhone: '+91 98765 43212',
-      practiceArea: 'Real Estate Law',
-      caseDescription: 'Property purchase agreement review and contract negotiation assistance.',
-      preferredDate: '2024-10-18',
-      preferredTime: '11:30 AM',
-      urgencyLevel: 'low',
-      status: 'pending',
-      createdAt: '2024-10-11T11:15:00Z',
-      isExistingCase: false,
-      budgetRange: '$2000-$3000'
-    },
-    {
-      id: 4,
-      clientName: 'Emily Davis',
-      clientEmail: 'emily.davis@email.com',
-      clientPhone: '+91 98765 43213',
-      practiceArea: 'Employment Law',
-      caseDescription: 'Wrongful termination case. Need consultation about employment rights and legal options.',
-      preferredDate: '2024-10-14',
-      preferredTime: '3:30 PM',
-      urgencyLevel: 'medium',
-      status: 'cancelled',
-      createdAt: '2024-10-08T16:45:00Z',
-      isExistingCase: false,
-      budgetRange: '$1500-$3000'
-    }
-  ];
 
   const fetchMessages = async () => {
     try {
@@ -106,46 +43,72 @@ const Messages = () => {
     }
   };
 
-  const fetchConsultations = () => {
-    // For now, use mock data
-    setConsultations(mockConsultations);
+  const fetchConsultations = async () => {
+    try {
+      const response = await api.get('/bookings/consultations');
+      if (response.data.success) {
+        const mapped = response.data.bookings.map(booking => ({
+          _id: booking._id,
+          clientName: `${booking.client_info?.first_name || ''} ${booking.client_info?.last_name || ''}`.trim() || 'Unknown Client',
+          email: booking.client_info?.email || '',
+          phone: booking.client_info?.phone || '',
+          practiceArea: booking.consultation_details?.practice_area || 'General Practice',
+          preferredDate: booking.consultation_details?.preferred_date ? `${booking.consultation_details.preferred_date} at ${booking.consultation_details.preferred_time || ''}` : 'Not Specified',
+          status: booking.status || 'pending',
+          message: booking.consultation_details?.case_description || '',
+          createdAt: booking.created_at || new Date().toISOString()
+        }));
+        setConsultations(mapped);
+      }
+    } catch (error) {
+      console.error('Failed to fetch consultations:', error);
+      toast.error('Failed to fetch consultations');
+    }
   };
 
   const confirmConsultation = async (consultationId) => {
     try {
-      // Update consultation status
-      setConsultations(prev => 
-        prev.map(cons => 
-          cons.id === consultationId 
-            ? { ...cons, status: 'confirmed' }
-            : cons
-        )
-      );
-
-      // Send confirmation email
-      const consultation = consultations.find(c => c.id === consultationId);
-      await api.post('/api/send-consultation-confirmation', {
-        consultation,
-        recipientEmail: 'pulluripranavi@gmail.com'
+      const response = await api.put(`/bookings/consultations/${consultationId}`, {
+        status: 'confirmed'
       });
-
-      toast.success('Consultation confirmed and email sent!');
+      if (response.data.success) {
+        setConsultations(prev => 
+          prev.map(cons => 
+            cons._id === consultationId 
+              ? { ...cons, status: 'confirmed' }
+              : cons
+          )
+        );
+        toast.success('Consultation confirmed successfully!');
+      } else {
+        throw new Error(response.data.message || 'Failed to update consultation');
+      }
     } catch (error) {
+      console.error('Failed to confirm consultation:', error);
       toast.error('Failed to confirm consultation');
     }
   };
 
   const cancelConsultation = async (consultationId, reason = '') => {
     try {
-      setConsultations(prev => 
-        prev.map(cons => 
-          cons.id === consultationId 
-            ? { ...cons, status: 'cancelled', cancellationReason: reason }
-            : cons
-        )
-      );
-      toast.success('Consultation cancelled');
+      const response = await api.put(`/bookings/consultations/${consultationId}`, {
+        status: 'cancelled',
+        notes: reason
+      });
+      if (response.data.success) {
+        setConsultations(prev => 
+          prev.map(cons => 
+            cons._id === consultationId 
+              ? { ...cons, status: 'cancelled', cancellationReason: reason }
+              : cons
+          )
+        );
+        toast.success('Consultation cancelled successfully!');
+      } else {
+        throw new Error(response.data.message || 'Failed to cancel consultation');
+      }
     } catch (error) {
+      console.error('Failed to cancel consultation:', error);
       toast.error('Failed to cancel consultation');
     }
   };
@@ -212,19 +175,11 @@ const Messages = () => {
     
     setIsReplying(true);
     try {
-      const response = await fetch('/api/messages/reply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          messageId: replyTo._id,
-          reply: replyMessage
-        })
+      const response = await api.post(`/messages/${replyTo._id}/reply`, {
+        reply: replyMessage
       });
 
-      if (response.ok) {
+      if (response.data.success || response.status === 200) {
         toast.success('Reply sent successfully');
         closeReplyModal();
         fetchMessages(); // Refresh messages

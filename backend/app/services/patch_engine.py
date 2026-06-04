@@ -16,8 +16,8 @@ Supported patch actions:
     ✅ delete_section      — Remove a section by ID
 
 Each patch stores:
-    before_metrics, expected_impact, trigger_reason, agent_name, confidence_score
-    for optimization intelligence memory.
+    before_metrics, expected_impact, trigger_reason, agent_name, confidence_score,
+    git_ref, deploy_ref — for optimization intelligence memory and rollback tracing.
 """
 
 import os
@@ -70,6 +70,8 @@ class PatchEngine:
             4. Increment schema_version
             5. Render HTML & write to disk
             6. Update child_websites collection
+            7. Deploy to Netlify → capture deploy_ref
+            8. Write deploy_ref back to history record
 
         Returns (success, updated_schema, error_message).
         """
@@ -104,8 +106,11 @@ class PatchEngine:
                 "timestamp": datetime.now(timezone.utc),
                 "patch_applied": patch,
                 "patch_metadata": meta,
+                "git_ref": None,
+                "deploy_ref": None,
             }
-            mongo.db.website_history.insert_one(history_record)
+            history_result = mongo.db.website_history.insert_one(history_record)
+            history_id = history_result.inserted_id
 
             # 3. Apply the surgical changes
             action = patch.get("action")
@@ -148,7 +153,6 @@ class PatchEngine:
             new_version = int(current_version) + 1
             active_schema["schema_version"] = new_version
             active_schema["updated_at"] = datetime.now(timezone.utc)
-            # Keep legacy field for backward compat
             active_schema["version"] = float(new_version)
 
             # 5. Save to MongoDB
@@ -171,10 +175,23 @@ class PatchEngine:
                 }}
             )
 
-            # 7. Push update to live Netlify site (best-effort)
-            cls._deploy_to_netlify(b_id_str, rendered_html)
+            # 7. Push update to live Netlify site (best-effort) — capture deploy_ref
+            deploy_ref = cls._deploy_to_netlify(b_id_str, rendered_html)
 
-            logger.info(f"✅ Patch applied: v{current_version} → v{new_version} for business {b_id_str}")
+            # 8. Write deploy_ref back to the history record
+            if deploy_ref:
+                mongo.db.website_history.update_one(
+                    {"_id": history_id},
+                    {"$set": {"deploy_ref": deploy_ref}},
+                )
+
+            logger.info(
+                f"✅ Patch applied: v{current_version} → v{new_version} "
+                f"for business {b_id_str} (deploy_ref={deploy_ref})"
+            )
+
+            # Attach deploy_ref to the returned schema for the caller
+            active_schema["deploy_ref"] = deploy_ref
             return True, active_schema, None
 
         except Exception as e:
@@ -182,27 +199,43 @@ class PatchEngine:
             return False, None, str(e)
 
     # ================================================================
-    # Rollback
+    # Rollback — supports targeted version OR single-step undo
     # ================================================================
 
     @classmethod
-    def rollback(cls, business_id):
+    def rollback(cls, business_id, target_version=None):
         """
-        1-click rollback to the preceding version in website_history.
+        Rollback to a specific version or the immediately preceding one.
+
+        Args:
+            target_version: If provided, restores the schema at that exact version number.
+                           If None, reverts to the most recent history entry (single-step undo).
         """
         try:
             b_id_str = str(business_id)
 
-            history_entry = mongo.db.website_history.find_one(
-                {"business_id": b_id_str},
-                sort=[("timestamp", -1)]
-            )
-
-            if not history_entry:
-                return False, None, "No rollback point found for this business website."
+            if target_version is not None:
+                # Targeted rollback — find the specific version
+                history_entry = mongo.db.website_history.find_one(
+                    {"business_id": b_id_str, "schema_version": int(target_version)}
+                )
+                if not history_entry:
+                    return False, None, f"Version {target_version} not found in history for this business."
+            else:
+                # Single-step undo — most recent history entry
+                history_entry = mongo.db.website_history.find_one(
+                    {"business_id": b_id_str},
+                    sort=[("timestamp", -1)]
+                )
+                if not history_entry:
+                    return False, None, "No rollback point found for this business website."
 
             restored_schema = history_entry["schema_snapshot"]
-            mongo.db.website_history.delete_one({"_id": history_entry["_id"]})
+
+            # If targeted rollback, do NOT delete the history entry (preserve timeline)
+            # If single-step undo, delete the entry to allow repeated undos
+            if target_version is None:
+                mongo.db.website_history.delete_one({"_id": history_entry["_id"]})
 
             restored_schema["updated_at"] = datetime.now(timezone.utc)
             mongo.db.website_schemas.update_one(
@@ -252,6 +285,31 @@ class PatchEngine:
             results.append(doc)
         return results
 
+    @classmethod
+    def get_patches_by_version_range(cls, business_id, from_version, to_version):
+        """
+        Returns all patches applied between two version numbers (inclusive).
+        Useful for rollback queries like:
+        "show me every patch deployed between v3 and v7 and their conversion outcomes."
+        """
+        b_id_str = str(business_id)
+        cursor = mongo.db.website_history.find(
+            {
+                "business_id": b_id_str,
+                "schema_version": {
+                    "$gte": int(from_version),
+                    "$lte": int(to_version),
+                },
+            },
+            {"schema_snapshot": 0},
+        ).sort("schema_version", 1)
+
+        results = []
+        for doc in cursor:
+            doc.pop("_id", None)
+            results.append(doc)
+        return results
+
     # ================================================================
     # Disk writer
     # ================================================================
@@ -275,30 +333,36 @@ class PatchEngine:
     def _deploy_to_netlify(cls, business_id, html_content):
         """
         Best-effort push of the new HTML to the live Netlify site.
-        Looks up the Netlify site_id stored in child_websites during initial deployment.
-        Failures are logged but never block the patch — the local + MongoDB versions are always saved.
+        Returns the deploy_ref (Netlify deploy ID) if successful, else None.
+
+        The deploy_ref is written back to the website_history record so
+        rollback queries can trace patches to specific production deploys.
         """
         try:
             site_record = mongo.db.child_websites.find_one({"owner_id": business_id})
             if not site_record:
                 logger.debug(f"No child_website record for {business_id}, skipping Netlify deploy.")
-                return
+                return None
 
             netlify_site_id = site_record.get("netlify_site_id")
             if not netlify_site_id:
                 logger.debug(f"No netlify_site_id for {business_id}, skipping Netlify deploy.")
-                return
+                return None
 
             from app.services.netlify_service import NetlifyService
             netlify = NetlifyService()
             deploy_result = netlify.deploy_site(netlify_site_id, {"index.html": html_content})
 
             if deploy_result.get("success"):
-                logger.info(f"🚀 Netlify re-deploy successful for business {business_id}")
+                deploy_ref = deploy_result.get("deploy_id") or deploy_result.get("id")
+                logger.info(f"🚀 Netlify re-deploy successful for business {business_id} (ref={deploy_ref})")
+                return deploy_ref
             else:
                 logger.warning(f"⚠️ Netlify re-deploy failed for {business_id}: {deploy_result.get('error')}")
+                return None
         except Exception as e:
             logger.warning(f"⚠️ Netlify deploy error (non-blocking) for {business_id}: {e}")
+            return None
 
     # ================================================================
     # Private helpers: surgical patch application

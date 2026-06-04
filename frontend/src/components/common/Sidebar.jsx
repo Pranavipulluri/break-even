@@ -8,6 +8,7 @@ import {
     PlusCircle,
     QrCode,
     Settings,
+    Sliders,
     Sparkles,
     Users,
     Zap
@@ -101,6 +102,13 @@ const Sidebar = () => {
       label: 'Website Builder',
       badge: null,
       gradient: 'from-teal-500 to-teal-600'
+    },
+    { 
+      to: '/schema-editor', 
+      icon: Sliders, 
+      label: 'Schema Editor',
+      badge: 'New',
+      gradient: 'from-amber-500 to-orange-600'
     },
     { 
       to: '/settings', 

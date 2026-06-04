@@ -329,3 +329,86 @@ class PatchValidator:
             if sec.get("id") == section_id:
                 return sec
         return None
+
+    # ================================================================
+    # Structured validation report (for MCP tool consumption)
+    # ================================================================
+
+    @classmethod
+    def validate_and_report(cls, schema_dict, patch):
+        """
+        Returns a structured validation report dict:
+        {
+            "valid": bool,
+            "errors": [...],
+            "warnings": [...],
+            "security_flags": [...]
+        }
+
+        This output is what the validate_patch_sandbox MCP tool wraps,
+        making validation results machine-readable for the orchestrator.
+        """
+        report = {
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "security_flags": [],
+        }
+
+        if not isinstance(patch, dict):
+            report["valid"] = False
+            report["errors"].append("Patch must be a dictionary object.")
+            return report
+
+        action = patch.get("action")
+        if action not in cls.SUPPORTED_ACTIONS:
+            report["valid"] = False
+            report["errors"].append(f"Unsupported patch action: '{action}'")
+            return report
+
+        # ── Security scan ──
+        str_patch = str(patch).lower()
+        for pattern in cls.FORBIDDEN_PATTERNS:
+            import re
+            if re.search(pattern, str_patch, re.IGNORECASE):
+                report["valid"] = False
+                report["security_flags"].append(
+                    f"Blocked pattern detected: {pattern}"
+                )
+                report["errors"].append(
+                    "Security threat blocked: Arbitrary JavaScript or stylesheet injection detected."
+                )
+
+        if not report["valid"]:
+            return report
+
+        # ── Standard validation ──
+        is_valid, err_msg = cls.validate_patch(schema_dict, patch)
+        if not is_valid:
+            report["valid"] = False
+            report["errors"].append(err_msg)
+
+        # ── Advisory warnings (non-blocking) ──
+        if action in ("update_section", "update_content"):
+            section_id = patch.get("section_id")
+            if section_id and section_id.startswith("hero_"):
+                report["warnings"].append(
+                    "Modifying hero sections impacts first-impression metrics. "
+                    "Ensure A/B baseline is captured before deploying."
+                )
+
+        if action == "reorder_sections":
+            order = patch.get("order", [])
+            if order and order[0] != "hero_1":
+                report["warnings"].append(
+                    "Hero section is not first in the proposed order. "
+                    "This may increase bounce rate on landing page."
+                )
+
+        if action == "swap_variant":
+            report["warnings"].append(
+                "Variant swap changes the visual layout structure. "
+                "Verify mobile responsiveness after deployment."
+            )
+
+        return report

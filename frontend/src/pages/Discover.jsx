@@ -1,5 +1,6 @@
 import { Clock, Globe, MapPin, Navigation, Phone, Search, Star, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { api } from '../services/api';
 
 const Discover = () => {
   // Simple fallback translate function
@@ -35,32 +36,23 @@ const Discover = () => {
 
   const loadInitialData = async () => {
     try {
-      // Load categories, featured businesses, and stats in parallel
+      // Load categories, featured businesses, and stats in parallel using api wrapper
       const [categoriesRes, featuredRes, statsRes] = await Promise.all([
-        fetch('/api/public/discover/categories'),
-        fetch('/api/public/discover/featured'),
-        fetch('/api/public/discover/stats')
+        api.get('/public/discover/categories'),
+        api.get('/public/discover/featured'),
+        api.get('/public/discover/stats')
       ]);
 
-      if (categoriesRes.ok) {
-        const categoriesData = await categoriesRes.json();
-        if (categoriesData.success) {
-          setCategories([defaultCategories[0], ...categoriesData.categories]);
-        }
+      if (categoriesRes.data && categoriesRes.data.success) {
+        setCategories([defaultCategories[0], ...categoriesRes.data.categories]);
       }
 
-      if (featuredRes.ok) {
-        const featuredData = await featuredRes.json();
-        if (featuredData.success) {
-          setFeaturedBusinesses(featuredData.businesses);
-        }
+      if (featuredRes.data && featuredRes.data.success) {
+        setFeaturedBusinesses(featuredRes.data.businesses);
       }
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        if (statsData.success) {
-          setStats(statsData.stats);
-        }
+      if (statsRes.data && statsRes.data.success) {
+        setStats(statsRes.data.stats);
       }
 
       // Load initial businesses
@@ -81,12 +73,9 @@ const Discover = () => {
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       params.append('limit', '20');
 
-      const response = await fetch(`/api/public/discover/businesses?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setBusinesses(data.businesses);
-        }
+      const response = await api.get(`/public/discover/businesses?${params}`);
+      if (response.data && response.data.success) {
+        setBusinesses(response.data.businesses);
       }
     } catch (error) {
       console.error('Error loading businesses:', error);

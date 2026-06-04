@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { api } from '../services/api';
 
 const LanguageSelector = ({ 
   currentLanguage = 'en', 
@@ -15,19 +16,8 @@ const LanguageSelector = ({
   useEffect(() => {
     const fetchLanguages = async () => {
       try {
-        const response = await fetch('/api/translation/languages');
-        
-        // Check if response is ok and is JSON
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Response is not JSON');
-        }
-        
-        const data = await response.json();
+        const response = await api.get('/translation/languages');
+        const data = response.data;
         
         if (data.success && data.languages) {
           setAvailableLanguages(data.languages);
@@ -39,8 +29,8 @@ const LanguageSelector = ({
         // Fallback to hardcoded languages - only English, Telugu, and Hindi
         setAvailableLanguages({
           'en': { name: 'English', native: 'English', flag: '🇺🇸' },
-          'te': { name: 'Telugu', native: 'తెలుగు', flag: '🇮�' },
-          'hi': { name: 'Hindi', native: 'हिंदी', flag: '�🇳' }
+          'te': { name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+          'hi': { name: 'Hindi', native: 'हिंदी', flag: '🇮🇳' }
         });
       } finally {
         setLoading(false);
