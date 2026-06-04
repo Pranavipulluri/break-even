@@ -188,102 +188,47 @@ class GitHubService:
             }
     
     def generate_website_html(self, business_name, content):
-        """Generate HTML content for the website"""
-        return f"""<!DOCTYPE html>
+        """Generate premium HTML content using SchemaRenderer + SchemaBridge.
+
+        Instead of a hardcoded basic template, this now:
+        1. Builds a proper JSON schema from the business info
+        2. Renders it through the SchemaRenderer (premium Tailwind templates)
+        3. Injects the child→parent analytics tracking snippet
+        """
+        try:
+            from app.services.schema_bridge import SchemaBridge
+            from app.services.schema_renderer import SchemaRenderer
+            from app.services.tracking_snippet import TrackingSnippet
+
+            # Merge business_name into content for the bridge
+            bridge_info = dict(content) if isinstance(content, dict) else {}
+            bridge_info.setdefault("website_name", business_name)
+            bridge_info.setdefault("site_name", business_name)
+
+            schema = SchemaBridge.build_schema_dict(
+                business_id=bridge_info.get("business_id", ""),
+                business_info=bridge_info,
+            )
+            html = SchemaRenderer.render(schema)
+
+            # Inject tracking snippet for child→parent analytics
+            html = TrackingSnippet.inject(
+                html,
+                business_id=bridge_info.get("business_id", ""),
+            )
+            return html
+
+        except Exception as e:
+            # Fallback: if SchemaRenderer fails, return a minimal valid page
+            import logging
+            logging.getLogger(__name__).warning(
+                f"SchemaRenderer fallback for GitHub deploy: {e}"
+            )
+            return f"""<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{business_name}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 1200px; margin: 0 auto; padding: 0 20px; }}
-        header {{ background: #3b82f6; color: white; padding: 1rem 0; }}
-        nav {{ display: flex; justify-content: space-between; align-items: center; }}
-        .logo {{ font-size: 1.5rem; font-weight: bold; }}
-        .hero {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4rem 0; text-align: center; }}
-        .hero h1 {{ font-size: 3rem; margin-bottom: 1rem; }}
-        .hero p {{ font-size: 1.2rem; margin-bottom: 2rem; }}
-        .btn {{ display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; transition: background 0.3s; }}
-        .btn:hover {{ background: #059669; }}
-        .section {{ padding: 4rem 0; }}
-        .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }}
-        .card {{ background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-        footer {{ background: #1f2937; color: white; padding: 2rem 0; text-align: center; }}
-    </style>
-</head>
-<body>
-    <header>
-        <nav class="container">
-            <div class="logo">{business_name}</div>
-            <div>
-                <a href="#about" style="color: white; text-decoration: none; margin: 0 1rem;">About</a>
-                <a href="#services" style="color: white; text-decoration: none; margin: 0 1rem;">Services</a>
-                <a href="#contact" style="color: white; text-decoration: none; margin: 0 1rem;">Contact</a>
-            </div>
-        </nav>
-    </header>
-
-    <main>
-        <section class="hero">
-            <div class="container">
-                <h1>{content.get('hero_title', f'Welcome to {business_name}')}</h1>
-                <p>{content.get('hero_subtitle', 'Your trusted business partner')}</p>
-                <a href="#contact" class="btn">Get Started</a>
-            </div>
-        </section>
-
-        <section id="about" class="section">
-            <div class="container">
-                <h2>About Us</h2>
-                <p>{content.get('about_us', f'{business_name} is dedicated to providing excellent service to our customers.')}</p>
-            </div>
-        </section>
-
-        <section id="services" class="section" style="background: #f9fafb;">
-            <div class="container">
-                <h2>Our Services</h2>
-                <p>{content.get('services_intro', 'We offer a comprehensive range of services to meet your needs.')}</p>
-                <div class="grid">
-                    <div class="card">
-                        <h3>Service 1</h3>
-                        <p>Professional service tailored to your needs.</p>
-                    </div>
-                    <div class="card">
-                        <h3>Service 2</h3>
-                        <p>Expert solutions for your business challenges.</p>
-                    </div>
-                    <div class="card">
-                        <h3>Service 3</h3>
-                        <p>Innovative approaches to drive your success.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="contact" class="section">
-            <div class="container">
-                <h2>Contact Us</h2>
-                <p>{content.get('contact_cta', 'Ready to get started? Contact us today!')}</p>
-                <div class="grid">
-                    <div>
-                        <h3>Get In Touch</h3>
-                        <p>Phone: {content.get('phone', 'Contact us for phone number')}</p>
-                        <p>Email: {content.get('email', 'Contact us for email')}</p>
-                        <p>Address: {content.get('address', 'Contact us for address')}</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 {business_name}. All rights reserved. Powered by Break-even.</p>
-        </div>
-    </footer>
-</body>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{business_name}</title></head>
+<body><h1>{business_name}</h1><p>{content.get('hero_subtitle', '') if isinstance(content, dict) else ''}</p></body>
 </html>"""
 
 # Initialize service - will be created when needed

@@ -6,7 +6,6 @@ import AICopilotDrawer from './components/AICopilotDrawer';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TranslationProvider } from './context/TranslationContext';
-import AITestPage from './pages/AITestPage';
 import AITools from './pages/AITools';
 import Analytics from './pages/Analytics';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +18,7 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import WebsiteAnalytics from './pages/WebsiteAnalytics';
 import WebsiteBuilder from './pages/WebsiteBuilder';
+import WebsiteSchemaLiveEditor from './pages/WebsiteSchemaLiveEditor';
 
 /**
  * Renders the AI Copilot Drawer only for authenticated users.
@@ -56,7 +56,7 @@ function App() {
                   <Route path="ai-tools" element={<AITools />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="website-builder" element={<WebsiteBuilder />} />
-                  <Route path="ai-test" element={<AITestPage />} />
+                  <Route path="schema-editor" element={<WebsiteSchemaLiveEditor />} />
                 </Route>
               </Routes>
               {/* Global AI Copilot Drawer — accessible from every page */}

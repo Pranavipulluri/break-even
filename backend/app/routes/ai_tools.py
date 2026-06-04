@@ -1,5 +1,6 @@
 # app/routes/ai_tools.py
 
+import re
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
@@ -11,6 +12,7 @@ from app.services.groq_service import GroqService
 from app.services.stability_service import StabilityService
 from app.services.mock_image_service import MockImageService
 from app.services.email_service import get_email_service
+from app.services.schema_bridge import SchemaBridge
 from bson import ObjectId
 from datetime import datetime
 import base64
@@ -20,6 +22,21 @@ import logging
 import time
 
 ai_bp = Blueprint('ai_tools', __name__)
+
+
+def _sanitize(text, max_len=500):
+    """Strip HTML tags and limit length for safety (Issue #5: XSS prevention)."""
+    if not isinstance(text, str):
+        return str(text) if text else ""
+    clean = re.sub(r'<[^>]+>', '', text)
+    return clean[:max_len]
+
+
+def _sanitize_dict(d):
+    """Sanitize all string values in a dict."""
+    if not isinstance(d, dict):
+        return d
+    return {k: _sanitize(v) if isinstance(v, str) else v for k, v in d.items()}
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -361,25 +378,27 @@ def dev_groq_test():
         return jsonify({'error': str(e), 'success': False}), 500
 
 @ai_bp.route('/ai-tools/dev/netlify-deploy', methods=['POST'])
+@jwt_required()
 def dev_netlify_deploy():
-    """Test Netlify deployment without authentication"""
+    """Deploy website to Netlify (JWT-protected)"""
     try:
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        site_name = data.get('site_name', 'Test Site')
-        business_info = data.get('business_info', {
+        site_name = _sanitize(data.get('site_name', 'Test Site'), 100)
+        business_info = _sanitize_dict(data.get('business_info', {
             'hero_title': 'Test Website',
             'hero_subtitle': 'Testing deployment',
             'about_us': 'This is a test.',
             'contact_cta': 'Contact us!'
-        })
+        }))
         
         result = get_netlify_service().create_and_deploy_website(site_name, business_info)
         
         # Save successful deployment to database for QR code to find
         if result.get('success') and result.get('website_url'):
             try:
-                from app import mongo
                 deployed_site = {
+                    'owner_id': current_user_id,
                     'website_name': site_name,
                     'site_name': site_name,
                     'website_url': result['website_url'],
@@ -387,12 +406,19 @@ def dev_netlify_deploy():
                     'deployment_info': result,
                     'business_info': business_info,
                     'created_at': datetime.utcnow(),
-                    'dev_deployment': True
                 }
                 mongo.db.deployed_sites.insert_one(deployed_site)
-                print(f"Saved deployed site: {site_name} -> {result['website_url']}")
+                logger.info(f"Saved deployed site: {site_name} -> {result['website_url']}")
+                
+                # Bridge: create website_schema for Copilot optimization
+                SchemaBridge.create_schema_from_deployment(
+                    business_id=current_user_id,
+                    business_info={**business_info, 'website_name': site_name},
+                    deploy_result=result,
+                    platform='netlify',
+                )
             except Exception as e:
-                print(f"Could not save deployment to database: {e}")
+                logger.warning(f"Post-deploy processing error: {e}")
         
         return jsonify(result), 200
         
@@ -400,25 +426,27 @@ def dev_netlify_deploy():
         return jsonify({'error': str(e), 'success': False}), 500
 
 @ai_bp.route('/ai-tools/dev/github-deploy', methods=['POST'])
+@jwt_required()
 def dev_github_deploy():
-    """Test GitHub deployment without authentication"""
+    """Deploy website to GitHub Pages (JWT-protected)"""
     try:
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        site_name = data.get('site_name', 'Test Site')
-        business_info = data.get('business_info', {
+        site_name = _sanitize(data.get('site_name', 'Test Site'), 100)
+        business_info = _sanitize_dict(data.get('business_info', {
             'hero_title': 'Test Website',
             'hero_subtitle': 'Testing deployment',
             'about_us': 'This is a test.',
             'contact_cta': 'Contact us!'
-        })
+        }))
         
         result = get_github_service().create_website_repository(site_name, business_info)
         
         # Save successful deployment to database for QR code to find
         if result.get('success') and result.get('website_url'):
             try:
-                from app import mongo
                 deployed_site = {
+                    'owner_id': current_user_id,
                     'website_name': site_name,
                     'site_name': site_name,
                     'website_url': result['website_url'],
@@ -426,12 +454,19 @@ def dev_github_deploy():
                     'deployment_info': result,
                     'business_info': business_info,
                     'created_at': datetime.utcnow(),
-                    'dev_deployment': True
                 }
                 mongo.db.deployed_sites.insert_one(deployed_site)
-                print(f"Saved deployed site: {site_name} -> {result['website_url']}")
+                logger.info(f"Saved deployed site: {site_name} -> {result['website_url']}")
+                
+                # Bridge: create website_schema for Copilot optimization
+                SchemaBridge.create_schema_from_deployment(
+                    business_id=current_user_id,
+                    business_info={**business_info, 'website_name': site_name},
+                    deploy_result=result,
+                    platform='github',
+                )
             except Exception as e:
-                print(f"Could not save deployment to database: {e}")
+                logger.warning(f"Post-deploy processing error: {e}")
         
         return jsonify(result), 200
         
@@ -439,14 +474,16 @@ def dev_github_deploy():
         return jsonify({'error': str(e), 'success': False}), 500
 
 @ai_bp.route('/ai-tools/dev/create-data-website', methods=['POST'])
+@jwt_required()
 def dev_create_data_website():
-    """Create a data collection website without authentication"""
+    """Create a data collection website (JWT-protected)"""
     try:
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        title = data.get('title', 'Data Collection Website')
-        description = data.get('description', 'Join our community and share your feedback!')
-        content = data.get('content', 'Welcome to our platform. We value your input and feedback.')
-        business_id = data.get('business_id')
+        title = _sanitize(data.get('title', 'Data Collection Website'), 200)
+        description = _sanitize(data.get('description', 'Join our community and share your feedback!'))
+        content = _sanitize(data.get('content', 'Welcome to our platform. We value your input and feedback.'), 2000)
+        business_id = data.get('business_id') or current_user_id
         
         # Create the website with data collection functionality
         netlify_service = get_netlify_service()
@@ -473,27 +510,72 @@ def dev_create_data_website():
         if result.get('success') and result.get('website_url'):
             try:
                 deployed_site = {
+                    'owner_id': current_user_id,
                     'title': title,
                     'description': description,
                     'content': content,
                     'website_url': result['website_url'],
                     'netlify_url': result.get('netlify_url'),
-                    'platform': result.get('platform', 'netlify'),  # Use the platform from result
+                    'platform': result.get('platform', 'netlify'),
                     'deployment_info': result,
                     'business_id': business_id,
                     'has_data_collection': True,
                     'created_at': datetime.utcnow(),
-                    'dev_deployment': True,
                     'features': ['user_registration', 'feedback_collection', 'sentiment_analysis']
                 }
                 mongo.db.deployed_sites.insert_one(deployed_site)
-                print(f"Saved data collection website: {title} -> {result['website_url']}")
+                logger.info(f"Saved data collection website: {title} -> {result['website_url']}")
+                
+                # Bridge: create website_schema for Copilot optimization
+                SchemaBridge.create_schema_from_deployment(
+                    business_id=business_id,
+                    business_info={'website_name': title, 'description': description},
+                    deploy_result=result,
+                    platform='netlify',
+                )
             except Exception as e:
-                print(f"Could not save deployment to database: {e}")
+                logger.warning(f"Post-deploy processing error: {e}")
         
         return jsonify(result), 200
         
     except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@ai_bp.route('/ai-tools/preview', methods=['POST'])
+@jwt_required()
+def preview_website():
+    """Returns rendered HTML preview without deploying.
+    
+    Generates the same premium HTML that would be deployed, but returns it
+    directly so the frontend can show it in an iframe before the user commits.
+    """
+    try:
+        data = request.get_json()
+        site_name = _sanitize(data.get('site_name', 'Preview Site'), 100)
+        business_info = _sanitize_dict(data.get('business_info', {}))
+        business_info.setdefault('website_name', site_name)
+
+        from app.services.schema_renderer import SchemaRenderer
+        from app.services.tracking_snippet import TrackingSnippet
+
+        schema = SchemaBridge.build_schema_dict(
+            business_id=get_jwt_identity(),
+            business_info=business_info,
+        )
+        html = SchemaRenderer.render(schema)
+
+        return jsonify({
+            'success': True,
+            'html': html,
+            'schema_summary': {
+                'sections': len(schema.get('sections', [])),
+                'theme': schema.get('theme', {}).get('palette', ''),
+                'seo_title': schema.get('seo', {}).get('title', ''),
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Preview generation error: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 @ai_bp.route('/ai-tools/dev/generate-image', methods=['POST'])
@@ -616,11 +698,10 @@ def generate_content():
             try:
                 logger.info(f"📧 Processing email campaign for user {current_user_id}")
                 
-                # Recipients including the test email
-                recipients = [
-                    'pulluripranavi@gmail.com',
-                    'visesh.bappana@gmail.com',
-                ]
+                # Recipients: use the authenticated user's email
+                user_doc = mongo.db.users.find_one({'_id': ObjectId(current_user_id)}, {'email': 1})
+                user_email = user_doc.get('email', '') if user_doc else ''
+                recipients = [user_email] if user_email else []
                 
                 # Try to send real emails first
                 try:

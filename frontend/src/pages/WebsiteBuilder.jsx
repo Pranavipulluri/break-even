@@ -6,10 +6,7 @@ import WebsitePreview from '../components/website/WebsitePreview';
 import { useTranslation } from '../context/TranslationContext';
 import { api } from '../services/api';
 
-// Debug auth in development
-if (process.env.NODE_ENV === 'development') {
-  import('../services/debugAuth');
-}
+// Development initialization
 
 const WebsiteBuilder = () => {
   const { currentLanguage, changeLanguage, translateWebsiteContent, t } = useTranslation();
@@ -20,6 +17,8 @@ const WebsiteBuilder = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [deployedUrl, setDeployedUrl] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState(null);
+  const [previewPlatform, setPreviewPlatform] = useState(null);
   
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     defaultValues: {
@@ -72,6 +71,62 @@ const WebsiteBuilder = () => {
     }
   };
 
+  // Preview website before deploying (Issue #13)
+  const handlePreview = async () => {
+    try {
+      setAiLoading(true);
+      const formData = watch();
+      if (!formData.website_name) {
+        toast.error('Please enter a website name first');
+        return;
+      }
+
+      toast.loading('🔍 Generating preview...', { duration: 2000 });
+
+      const businessInfo = {
+        website_name: formData.website_name,
+        business_type: formData.business_type,
+        description: formData.description,
+        area: formData.area,
+        services_products: formData.services_products || '',
+        phone: formData.phone || '',
+        email: formData.email || '',
+        address: formData.address || formData.area || '',
+        color_theme: formData.color_theme,
+        unique_selling_points: formData.unique_selling_points || '',
+        contact_cta: formData.contact_cta || 'Contact us today!',
+      };
+
+      const res = await api.post('/ai-tools/preview', {
+        site_name: formData.website_name,
+        business_info: businessInfo,
+      });
+
+      if (res.data?.success) {
+        setPreviewHtml(res.data.html);
+        toast.success('Preview ready!');
+      } else {
+        toast.error(res.data?.error || 'Preview generation failed');
+      }
+    } catch (err) {
+      console.error('Preview error:', err);
+      toast.error('Failed to generate preview');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Deploy with optional preview confirmation
+  const handlePreviewThenDeploy = (platform) => {
+    setPreviewPlatform(platform);
+    handlePreview();
+  };
+
+  const confirmDeploy = () => {
+    setPreviewHtml(null);
+    createAIWebsite(previewPlatform || 'netlify');
+  };
+
   const createAIWebsite = async (platform = 'netlify') => {
     try {
       setAiLoading(true);
@@ -108,13 +163,8 @@ const WebsiteBuilder = () => {
           color_scheme: formData.color_theme,
           logo_url: formData.logo_url
         };      // Use development endpoint that doesn't require authentication
-      const contentResponse = await fetch('http://localhost:5000/api/ai-tools/dev/gemini-test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: `Create comprehensive, professional website content for "${formData.website_name}" - a ${formData.business_type || 'business'} in ${formData.area || 'local area'}. 
+      const contentResponse = await api.post('/ai-tools/dev/gemini-test', {
+        prompt: `Create comprehensive, professional website content for "${formData.website_name}" - a ${formData.business_type || 'business'} in ${formData.area || 'local area'}. 
 
 BUSINESS PROFILE:
 - Business Name: ${formData.website_name}
@@ -138,10 +188,9 @@ Generate authentic, engaging website content including:
 6. Contact Section: Clear contact information and call-to-action
 
 Make it sound authentic, locally-focused, and specific to small businesses in ${formData.business_type}. Use professional but approachable tone.`
-        })
       });
       
-      const contentResult = await contentResponse.json();
+      const contentResult = contentResponse.data;
       
       if (!contentResult.success) {
         throw new Error('Failed to generate website content: ' + (contentResult.error || 'AI service unavailable'));
@@ -152,29 +201,17 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
       
       let deployResult;
       if (platform === 'netlify') {
-        const deployResponse = await fetch('http://localhost:5000/api/ai-tools/dev/netlify-deploy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            site_name: formData.website_name,
-            business_info: businessInfo
-          })
+        const deployResponse = await api.post('/ai-tools/dev/netlify-deploy', {
+          site_name: formData.website_name,
+          business_info: businessInfo
         });
-        deployResult = await deployResponse.json();
+        deployResult = deployResponse.data;
       } else if (platform === 'github') {
-        const deployResponse = await fetch('http://localhost:5000/api/ai-tools/dev/github-deploy', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            site_name: formData.website_name,
-            business_info: businessInfo
-          })
+        const deployResponse = await api.post('/ai-tools/dev/github-deploy', {
+          site_name: formData.website_name,
+          business_info: businessInfo
         });
-        deployResult = await deployResponse.json();
+        deployResult = deployResponse.data;
       }
 
       if (!deployResult || !deployResult.success) {
@@ -226,15 +263,8 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
       };
 
       // Use development endpoint for data collection website
-      const response = await fetch('http://localhost:5000/api/ai-tools/dev/create-data-website', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(websiteData)
-      });
-      
-      const result = await response.json();
+      const response = await api.post('/ai-tools/dev/create-data-website', websiteData);
+      const result = response.data;
       
       if (result.success && result.website_url) {
         setCurrentWebsite({
@@ -301,15 +331,8 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
       console.log('Sending law firm data:', lawFirmData);
 
       // Use law firm integration service
-      const response = await fetch('http://localhost:5000/api/law-firm/create-website', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(lawFirmData)
-      });
-      
-      const result = await response.json();
+      const response = await api.post('/law-firm/create-website', lawFirmData);
+      const result = response.data;
       
       console.log('Backend response:', result);
       console.log('Response status:', response.status);
@@ -450,15 +473,8 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
       console.log('Sending spa data:', spaData);
 
       // Use beauty salon integration service
-      const response = await fetch('http://localhost:5000/api/beauty-salon/create-complete-salon', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(spaData)
-      });
-      
-      const result = await response.json();
+      const response = await api.post('/beauty-salon/create-complete-salon', spaData);
+      const result = response.data;
       
       console.log('Backend response:', result);
       console.log('Response status:', response.status);
@@ -535,15 +551,8 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
       setLoading(true);
       
       // Use development endpoint that doesn't require authentication
-      const response = await fetch('http://localhost:5000/api/website-builder/dev-create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-      });
-      
-      const result = await response.json();
+      const response = await api.post('/website-builder/dev-create', data);
+      const result = response.data;
       
       if (result.success) {
         toast.success(result.message || 'Website created successfully!');
@@ -1365,6 +1374,19 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
+              onClick={handlePreview}
+              disabled={aiLoading}
+              className="btn-primary flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700"
+            >
+              {aiLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Eye size={16} />
+              )}
+              <span>Preview Website</span>
+            </button>
+            <button
+              type="button"
               onClick={() => createAIWebsite('netlify')}
               disabled={aiLoading}
               className="btn-primary flex items-center space-x-2 bg-teal-600 hover:bg-teal-700"
@@ -1528,6 +1550,60 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
           onToggle={() => setPreviewMode(!previewMode)}
         />
       </div>
+
+      {/* Preview Modal */}
+      {previewHtml && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+        }}>
+          <div style={{
+            background: '#1e293b', borderRadius: 12, width: '90vw', maxWidth: 1200,
+            height: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{
+              padding: '12px 20px', display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14 }}>
+                🔍 Website Preview
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={confirmDeploy}
+                  style={{
+                    padding: '6px 16px', fontSize: 13, fontWeight: 600,
+                    background: '#10b981', color: 'white', border: 'none',
+                    borderRadius: 6, cursor: 'pointer',
+                  }}
+                >
+                  ✅ Looks Good — Deploy!
+                </button>
+                <button
+                  onClick={() => setPreviewHtml(null)}
+                  style={{
+                    padding: '6px 16px', fontSize: 13, fontWeight: 600,
+                    background: 'rgba(255,255,255,0.1)', color: '#e2e8f0',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 6, cursor: 'pointer',
+                  }}
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+            <iframe
+              srcDoc={previewHtml}
+              title="Website Preview"
+              style={{ flex: 1, border: 'none', background: 'white' }}
+              sandbox="allow-scripts"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

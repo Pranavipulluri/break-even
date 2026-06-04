@@ -3,7 +3,7 @@ from datetime import datetime
 from bson import ObjectId
 
 class Product:
-    def _init_(self, name, description, price, stock, category, user_id, sku=None, image=None):
+    def __init__(self, name, description, price, stock, category, user_id, sku=None, image=None):
         self.name = name
         self.description = description
         self.price = float(price)

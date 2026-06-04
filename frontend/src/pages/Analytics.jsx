@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, MessageSquare, Eye, Heart, Filter, Download, Calendar, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, MessageSquare, Eye, Heart, Filter, Download, Calendar, RefreshCw, MousePointer, ArrowDownRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
 import toast from 'react-hot-toast';
 
 const Analytics = () => {
+  const { user } = useAuth();
+  const { dispatch } = useApp();
+  const businessId = user?._id || user?.id || '';
+
   const [analyticsData, setAnalyticsData] = useState(null);
   const [sentimentData, setSentimentData] = useState(null);
   const [customerData, setCustomerData] = useState(null);
+  const [eventSummary, setEventSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState('30d');
@@ -48,15 +55,40 @@ const Analytics = () => {
     try {
       setLoading(true);
       
-      const [overviewRes, sentimentRes, customerRes] = await Promise.all([
+      const requests = [
         api.get(`/analytics/overview?range=${dateRange}`),
         api.get('/analytics/sentiment'),
-        api.get('/analytics/customers')
-      ]);
+        api.get('/analytics/customers'),
+      ];
+
+      // Fetch event summary if we have a businessId
+      if (businessId) {
+        const daysMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+        requests.push(api.get(`/events/summary/${businessId}?days=${daysMap[dateRange] || 30}`));
+      }
+
+      const results = await Promise.all(requests.map(p => p.catch(() => null)));
       
-      setAnalyticsData(overviewRes.data);
-      setSentimentData(sentimentRes.data);
-      setCustomerData(customerRes.data);
+      if (results[0]?.data) setAnalyticsData(results[0].data);
+      if (results[1]?.data) setSentimentData(results[1].data);
+      if (results[2]?.data) setCustomerData(results[2].data);
+      
+      if (results[3]?.data?.success) {
+        const summary = results[3].data.summary;
+        setEventSummary(summary);
+        // Dispatch to AppContext so AICopilotDrawer can read these live
+        dispatch({
+          type: 'SET_ENGAGEMENT_METRICS',
+          payload: {
+            bounce_rate: summary.bounce_rate || 0,
+            cta_click_rate: summary.cta_click_rate || 0,
+            booking_conversion_rate: summary.booking_conversion_rate || 0,
+            page_views: summary.page_view || 0,
+            cta_clicks: summary.cta_click || 0,
+            bounces: summary.bounce || 0,
+          },
+        });
+      }
     } catch (error) {
       toast.error('Failed to fetch analytics data');
     } finally {
@@ -234,39 +266,36 @@ const Analytics = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Total Visitors"
-              value="12.5K"
+              value={analyticsData?.totalVisits?.toLocaleString() || (eventSummary?.page_view || 0).toLocaleString()}
               icon={Eye}
               color="bg-blue-500"
               gradient="from-blue-500 to-indigo-600"
-              change={15.3}
-              description="Unique website visitors"
+              change={eventSummary ? undefined : 15.3}
+              description={eventSummary ? `${eventSummary.page_view || 0} page views this period` : 'Unique website visitors'}
             />
             <MetricCard
               title="Customer Messages"
-              value="234"
+              value={analyticsData?.totalMessages?.toLocaleString() || '0'}
               icon={MessageSquare}
               color="bg-green-500"
               gradient="from-green-500 to-emerald-600"
-              change={8.2}
               description="Messages received"
             />
             <MetricCard
-              title="New Customers"
-              value="89"
-              icon={Users}
+              title="CTA Clicks"
+              value={(eventSummary?.cta_click || 0).toLocaleString()}
+              icon={MousePointer}
               color="bg-purple-500"
               gradient="from-purple-500 to-pink-600"
-              change={-2.1}
-              description="New registrations"
+              description={`Click rate: ${eventSummary?.cta_click_rate ?? 0}%`}
             />
             <MetricCard
-              title="Engagement Rate"
-              value="73%"
-              icon={TrendingUp}
+              title="Bounce Rate"
+              value={`${eventSummary?.bounce_rate ?? 0}%`}
+              icon={ArrowDownRight}
               color="bg-orange-500"
               gradient="from-orange-500 to-red-600"
-              change={5.8}
-              description="Customer interaction rate"
+              description={`${eventSummary?.bounce || 0} bounces / ${eventSummary?.page_view || 0} views`}
             />
           </div>
 

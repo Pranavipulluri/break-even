@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { api } from '../services/api';
 
 // Translation Context
 const TranslationContext = createContext();
@@ -47,18 +48,8 @@ export const TranslationProvider = ({ children }) => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/translation/get-ui-translations?lang=${language}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Response is not JSON');
-      }
-      
-      const data = await response.json();
+      const response = await api.get(`/translation/get-ui-translations?lang=${language}`);
+      const data = response.data;
       
       if (data.success && data.ui_translations) {
         setTranslations(data.ui_translations);
@@ -72,7 +63,7 @@ export const TranslationProvider = ({ children }) => {
       // Use fallback translations for common UI elements
       const fallbackTranslations = {
         'website_builder': language === 'te' ? 'వెబ్‌సైట్ బిల్డర్' : 
-                          language === 'hi' ? 'वेबसाइट बिल्डर' :
+                          language === 'hi' ? 'वेబ్‌సైట్ బిల్డర్' :
                           'Website Builder',
         'create_business_website': language === 'te' ? 'మీ వ్యాపార వెబ్‌సైట్‌ను సృష్టించండి' :
                                   language === 'hi' ? 'अपनी व्यावसायिक वेबसाइट बनाएं' :
@@ -116,19 +107,13 @@ export const TranslationProvider = ({ children }) => {
     }
     
     try {
-      const response = await fetch('http://localhost:5000/api/translation/translate-text', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          target_lang: targetLang,
-          source_lang: sourceLang
-        })
+      const response = await api.post('/translation/translate-text', {
+        text,
+        target_lang: targetLang,
+        source_lang: sourceLang
       });
       
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         // Cache the translation
@@ -151,27 +136,12 @@ export const TranslationProvider = ({ children }) => {
     if (!websiteData || targetLang === 'en') return websiteData;
     
     try {
-      const response = await fetch('http://localhost:5000/api/translation/translate-website', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          website_data: websiteData,
-          target_lang: targetLang
-        })
+      const response = await api.post('/translation/translate-website', {
+        website_data: websiteData,
+        target_lang: targetLang
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Response is not JSON');
-      }
-      
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success && data.translated_website) {
         return data.translated_website;
@@ -190,18 +160,12 @@ export const TranslationProvider = ({ children }) => {
     if (!cardData || targetLang === 'en') return cardData;
     
     try {
-      const response = await fetch('http://localhost:5000/api/translation/translate-business-card', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          card_data: cardData,
-          target_lang: targetLang
-        })
+      const response = await api.post('/translation/translate-business-card', {
+        card_data: cardData,
+        target_lang: targetLang
       });
       
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         return data.translated_card;
@@ -225,15 +189,8 @@ export const TranslationProvider = ({ children }) => {
     if (!text) return 'en';
     
     try {
-      const response = await fetch('http://localhost:5000/api/translation/detect-language', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text })
-      });
-      
-      const data = await response.json();
+      const response = await api.post('/translation/detect-language', { text });
+      const data = response.data;
       
       if (data.success) {
         return data.detected_language;
@@ -251,19 +208,13 @@ export const TranslationProvider = ({ children }) => {
     if (!items || !Array.isArray(items) || targetLang === sourceLang) return items;
     
     try {
-      const response = await fetch('http://localhost:5000/api/translation/batch-translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items,
-          target_lang: targetLang,
-          source_lang: sourceLang
-        })
+      const response = await api.post('/translation/batch-translate', {
+        items,
+        target_lang: targetLang,
+        source_lang: sourceLang
       });
       
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         return data.translated_items;

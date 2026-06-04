@@ -7,6 +7,7 @@ const initialState = {
   products: [],
   messages: [],
   analytics: null,
+  engagementMetrics: null,
   loading: false,
   error: null
 };
@@ -41,6 +42,8 @@ const appReducer = (state, action) => {
       return { ...state, messages: [action.payload, ...state.messages] };
     case 'SET_ANALYTICS':
       return { ...state, analytics: action.payload };
+    case 'SET_ENGAGEMENT_METRICS':
+      return { ...state, engagementMetrics: action.payload };
     default:
       return state;
   }

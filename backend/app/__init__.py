@@ -5,6 +5,7 @@ from flask_cors import CORS
 from flask_mail import Mail
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from app.config import Config
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Initialize extensions
 mongo = PyMongo()
@@ -53,7 +54,6 @@ def create_app(config_class=Config):
     from app.routes.customers import customers_bp
     from app.routes.child_website import child_website_bp
     from app.routes.public_api import public_api_bp
-    from app.routes.chatbot import chatbot_bp
     from app.routes.bookings import bookings_bp
     from app.routes.bookings_routes import bookings_routes_bp
     from app.routes.orders import orders_bp
@@ -63,6 +63,7 @@ def create_app(config_class=Config):
     from app.routes.ai_chatbot_routes import ai_chatbot_bp
     from app.routes.consultation_routes import consultation_bp
     from app.routes.agent_routes import agent_bp
+    from app.routes.event_routes import event_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api')
@@ -75,7 +76,6 @@ def create_app(config_class=Config):
     app.register_blueprint(customers_bp, url_prefix='/api')
     app.register_blueprint(child_website_bp, url_prefix='/api')
     app.register_blueprint(public_api_bp, url_prefix='/api')
-    app.register_blueprint(chatbot_bp, url_prefix='/api')
     app.register_blueprint(bookings_bp, url_prefix='/api')
     app.register_blueprint(bookings_routes_bp, url_prefix='/api')
     app.register_blueprint(orders_bp, url_prefix='/api')
@@ -85,6 +85,7 @@ def create_app(config_class=Config):
     app.register_blueprint(ai_chatbot_bp)  # AI chatbot routes
     app.register_blueprint(consultation_bp, url_prefix='/api')  # Consultation routes
     app.register_blueprint(agent_bp, url_prefix='/api')  # AI Agent Copilot routes
+    app.register_blueprint(event_bp, url_prefix='/api')  # Analytics Event Collector
     
     # Initialize law firm integration service with socketio and mongo client
     init_law_firm_routes(socketio, mongo.cx)
@@ -130,5 +131,33 @@ def create_app(config_class=Config):
     with app.app_context():
         from app.utils.database import init_database
         init_database()
+
+    # ── Outcome Updater — closes the AI learn loop ──
+    # Runs every 15 seconds to check for patches whose predicted outcomes
+    # have sat long enough to evaluate against real event data.
+    # Updates business_memory records from "applied_pending_results" to
+    # "success" / "FAILED" with observed conversion deltas and re-vectorizes.
+    try:
+        from app.services.outcome_updater import run_outcome_updates
+        scheduler = BackgroundScheduler(daemon=True)
+        scheduler.add_job(
+            func=run_outcome_updates,
+            args=[app],
+            trigger="interval",
+            seconds=15,
+            id="outcome_updater",
+            replace_existing=True,
+            max_instances=1,
+        )
+        scheduler.start()
+        import logging
+        logging.getLogger(__name__).info(
+            "🔄 OutcomeUpdater scheduler started (interval=15s)"
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"OutcomeUpdater scheduler failed to start: {e}"
+        )
 
     return app

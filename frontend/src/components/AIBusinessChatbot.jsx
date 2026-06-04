@@ -2,6 +2,7 @@ import { Bot, Maximize2, Minimize2, Send, User, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/TranslationContext';
+import { api } from '../services/api';
 
 const AIBusinessChatbot = ({ isOpen, onClose }) => {
   const { t: translate, currentLanguage } = useTranslation();
@@ -48,37 +49,26 @@ const AIBusinessChatbot = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      // Call Gemini API for business co-partner response
-      const response = await fetch('/api/ai/business-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      // Call Gemini API for business co-partner response via Axios
+      const response = await api.post('/ai/business-chat', {
+        message: inputMessage,
+        language: currentLanguage,
+        user_context: {
+          name: user?.name,
+          business_type: user?.business_category,
+          business_name: user?.business_name || user?.name
         },
-        body: JSON.stringify({
-          message: inputMessage,
-          language: currentLanguage,
-          user_context: {
-            name: user?.name,
-            business_type: user?.business_category,
-            business_name: user?.business_name || user?.name
-          },
-          conversation_history: messages.slice(-5) // Last 5 messages for context
-        })
+        conversation_history: messages.slice(-5) // Last 5 messages for context
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const botMessage = {
-          id: Date.now() + 1,
-          type: 'bot',
-          content: data.response,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, botMessage]);
-      } else {
-        throw new Error('Failed to get response');
-      }
+      const data = response.data;
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: data.response,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage = {
