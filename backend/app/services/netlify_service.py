@@ -21,22 +21,32 @@ class NetlifyService:
     
     @property
     def api_key(self):
-        if self._api_key:
-            return self._api_key
         try:
-            from flask import current_app
-            return current_app.config.get('NETLIFY_API_KEY')
-        except RuntimeError:
-            # Fallback when outside application context
-            from app.config import Config
-            return Config.NETLIFY_API_KEY
+            if self._api_key:
+                return self._api_key
+            try:
+                from flask import current_app
+                return current_app.config.get('NETLIFY_API_KEY')
+            except RuntimeError:
+                # Fallback when outside application context
+                from app.config import Config
+                return getattr(Config, 'NETLIFY_API_KEY', None) or os.environ.get('NETLIFY_API_KEY')
+        except BaseException:
+            return os.environ.get('NETLIFY_API_KEY')
     
     @property
     def headers(self):
-        return {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
+        try:
+            api_key = self.api_key or ""
+            return {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            }
+        except BaseException:
+            return {
+                'Authorization': 'Bearer ',
+                'Content-Type': 'application/json'
+            }
     
     def create_site(self, site_name, custom_domain=None):
         """Create a new Netlify site"""
@@ -47,7 +57,7 @@ class NetlifyService:
                 "custom_domain": custom_domain
             }
             
-            response = requests.post(url, headers=self.headers, json=data)
+            response = requests.post(url, headers=self.headers, json=data, timeout=30)
             
             if response.status_code == 201:
                 site_data = response.json()
@@ -81,7 +91,7 @@ class NetlifyService:
                     'error': f'Netlify API Error: {response.status_code} - {response.text}'
                 }
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)
@@ -108,7 +118,7 @@ class NetlifyService:
                 'Content-Type': 'application/zip'
             }
             
-            response = requests.post(url, headers=headers, data=zip_buffer.getvalue())
+            response = requests.post(url, headers=headers, data=zip_buffer.getvalue(), timeout=60)
             
             if response.status_code in [200, 201]:
                 deploy_data = response.json()
@@ -127,7 +137,7 @@ class NetlifyService:
                     'error': f'Deploy failed: {response.status_code} - {response.text}'
                 }
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)
@@ -192,7 +202,7 @@ class NetlifyService:
             else:
                 return deploy_result
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)
@@ -257,7 +267,7 @@ class NetlifyService:
             else:
                 return deploy_result
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)
@@ -366,7 +376,7 @@ class NetlifyService:
             
             return result
             
-        except Exception as e:
+        except BaseException as e:
             print(f"❌ Error creating data collection website: {e}")
             return {
                 'success': False,
@@ -1043,7 +1053,7 @@ exports.handler = async (event, context) => {
         """Get information about a Netlify site"""
         try:
             url = f"{self.base_url}/sites/{site_id}"
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=30)
             
             if response.status_code == 200:
                 site_data = response.json()
@@ -1064,7 +1074,7 @@ exports.handler = async (event, context) => {
                     'error': f'Site not found: {response.status_code}'
                 }
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)
@@ -1078,7 +1088,7 @@ exports.handler = async (event, context) => {
                 "name": new_name
             }
             
-            response = requests.patch(url, headers=self.headers, json=data)
+            response = requests.patch(url, headers=self.headers, json=data, timeout=30)
             
             if response.status_code == 200:
                 return {
@@ -1091,7 +1101,7 @@ exports.handler = async (event, context) => {
                     'error': f'Update failed: {response.status_code} - {response.text}'
                 }
                 
-        except Exception as e:
+        except BaseException as e:
             return {
                 'success': False,
                 'error': str(e)

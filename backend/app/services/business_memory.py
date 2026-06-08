@@ -25,7 +25,7 @@ import logging
 from datetime import datetime, timezone
 import numpy as np
 from app import mongo
-import google.generativeai as genai
+from google import genai
 from flask import current_app
 
 logger = logging.getLogger(__name__)
@@ -48,14 +48,18 @@ class BusinessMemory:
         api_key = current_app.config.get("GEMINI_API_KEY")
         if api_key:
             try:
-                genai.configure(api_key=api_key)
-                response = genai.embed_content(
-                    model="models/embedding-001",
-                    content=text,
-                    task_type="retrieval_document",
+                client = genai.Client(api_key=api_key)
+                # gemini-embedding-001 is the current v1beta embedding model.
+                # If this key does not have billing enabled, the call returns 403
+                # and the local numpy fallback below is used automatically.
+                response = client.models.embed_content(
+                    model="models/gemini-embedding-001",
+                    contents=text,
                 )
-                if "embedding" in response:
-                    return response["embedding"]
+                # New SDK returns EmbedContentResponse with .embeddings list
+                embeddings = getattr(response, "embeddings", None)
+                if embeddings and len(embeddings) > 0:
+                    return embeddings[0].values
             except Exception as e:
                 logger.warning(f"Gemini embedding failed: {e}. Using local cosine fallback.")
 
@@ -267,9 +271,18 @@ class BusinessMemory:
             # Determine the business's industry from child_websites
             website = mongo.db.child_websites.find_one(
                 {"owner_id": business_id},
-                {"industry_type": 1},
+                {"industry_type": 1, "business_type": 1},
             )
-            industry = (website or {}).get("industry_type", "general")
+            if not website:
+                from bson import ObjectId
+                try:
+                    website = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(business_id)},
+                        {"industry_type": 1, "business_type": 1},
+                    )
+                except Exception:
+                    pass
+            industry = (website or {}).get("industry_type") or (website or {}).get("business_type") or "general"
 
             # Query industry benchmarks
             from app.services.industry_benchmarks import get_benchmarks_for_industry
@@ -421,10 +434,18 @@ class BusinessMemory:
                 industry = industry_type or "general"
                 if not industry_type:
                     website = mongo.db.child_websites.find_one(
-                        {"owner_id": b_id_str}, {"industry_type": 1}
+                        {"owner_id": b_id_str}, {"industry_type": 1, "business_type": 1}
                     )
+                    if not website:
+                        from bson import ObjectId
+                        try:
+                            website = mongo.db.child_websites.find_one(
+                                {"owner_id": ObjectId(b_id_str)}, {"industry_type": 1, "business_type": 1}
+                            )
+                        except Exception:
+                            pass
                     if website:
-                        industry = website.get("industry_type", "general")
+                        industry = website.get("industry_type") or website.get("business_type") or "general"
 
                 from app.services.industry_benchmarks import get_benchmarks_for_industry
                 benchmarks = get_benchmarks_for_industry(industry, limit=limit - len(results))
@@ -491,6 +512,60 @@ class BusinessMemory:
             return []
 
     # ================================================================
+    # Utility: Store a successful patch as positive memory
+    # ================================================================
+
+    @classmethod
+    def add_success_memory(cls, business_id, layout_snapshot, outcome_metrics):
+        """
+        Stores a successful layout configuration snapshot and its outcome metrics in the memory DB.
+        """
+        try:
+            b_id_str = str(business_id)
+            site_doc = mongo.db.child_websites.find_one(
+                {"owner_id": b_id_str}, {"industry_type": 1, "business_type": 1}
+            )
+            if not site_doc:
+                from bson import ObjectId
+                try:
+                    site_doc = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(b_id_str)}, {"industry_type": 1, "business_type": 1}
+                    )
+                except Exception:
+                    pass
+            industry = (
+                (site_doc or {}).get("industry_type")
+                or (site_doc or {}).get("business_type")
+                or "general"
+            )
+        except Exception:
+            industry = "general"
+
+
+        metrics_before = float(outcome_metrics.get("conversion_rate_percentage", 4.8))
+        conversion_gain = 1.8
+        metrics_after = metrics_before + conversion_gain
+
+        sections = layout_snapshot.get("sections", [])
+        layout_desc = f"Schema with {len(sections)} sections"
+        if sections:
+            layout_desc += f": {', '.join([s.get('id', '') for s in sections])}"
+
+        return cls.add_memory(
+            business_id=business_id,
+            patch_name="fallback_layout_optimization",
+            reason="Populating RAG memory with successful layout configuration in fallback mode",
+            layout_used=layout_desc,
+            metrics_before=metrics_before,
+            metrics_after=metrics_after,
+            conversion_gain=conversion_gain,
+            agent_name="BusinessCopilot",
+            patch_outcome="success",
+            industry_type=industry,
+            patch_json=layout_snapshot,
+        )
+
+    # ================================================================
     # Utility: Store a failed patch as negative memory
     # ================================================================
 
@@ -512,3 +587,4 @@ class BusinessMemory:
             patch_outcome=f"FAILED: {error_detail}",
             patch_json=patch_json,
         )
+

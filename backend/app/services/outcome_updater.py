@@ -138,6 +138,9 @@ def _update_single_outcome(record, now):
     is_demo_simulated = False
     demo_fallback_cutoff = now - timedelta(seconds=DEMO_FALLBACK_SECONDS)
 
+    if deployed_at.tzinfo is None:
+        deployed_at = deployed_at.replace(tzinfo=timezone.utc)
+
     if total_events == 0 and deployed_at <= demo_fallback_cutoff:
         # No real traffic recorded in the post-deployment window
         # → apply a realistic variance on the predicted gain for sandbox

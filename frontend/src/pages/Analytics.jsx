@@ -1,193 +1,163 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, MessageSquare, Eye, Heart, Filter, Download, Calendar, RefreshCw, MousePointer, ArrowDownRight } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area } from 'recharts';
+import React, { useState } from 'react';
+import {
+  BarChart3, TrendingUp, Users, MessageSquare, Eye, Heart,
+  Download, RefreshCw, MousePointer, ArrowDownRight, Clock,
+} from 'lucide-react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart, Bar, AreaChart, Area,
+} from 'recharts';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import toast from 'react-hot-toast';
+import { useAnalyticsRange, formatSecondsAgo } from '../hooks/useAnalytics';
 
-const Analytics = () => {
-  const { user } = useAuth();
-  const { dispatch } = useApp();
-  const businessId = user?._id || user?.id || '';
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [sentimentData, setSentimentData] = useState(null);
-  const [customerData, setCustomerData] = useState(null);
-  const [eventSummary, setEventSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState('30d');
+const DATE_RANGES = [
+  { value: '7d',  label: '7 Days'  },
+  { value: '30d', label: '30 Days' },
+  { value: '90d', label: '90 Days' },
+  { value: '1y',  label: '1 Year'  },
+];
 
-  const tabs = [
-    { 
-      id: 'overview', 
-      name: 'Overview', 
-      icon: BarChart3,
-      gradient: 'from-blue-500 to-indigo-600'
-    },
-    { 
-      id: 'sentiment', 
-      name: 'Customer Sentiment', 
-      icon: Heart,
-      gradient: 'from-pink-500 to-rose-600'
-    },
-    { 
-      id: 'customers', 
-      name: 'Customer Insights', 
-      icon: Users,
-      gradient: 'from-green-500 to-emerald-600'
-    },
-  ];
+const TABS = [
+  { id: 'overview',   name: 'Overview',           icon: BarChart3, gradient: 'from-blue-500 to-indigo-600'  },
+  { id: 'sentiment',  name: 'Customer Sentiment',  icon: Heart,     gradient: 'from-pink-500 to-rose-600'    },
+  { id: 'customers',  name: 'Customer Insights',   icon: Users,     gradient: 'from-green-500 to-emerald-600' },
+];
 
-  const dateRanges = [
-    { value: '7d', label: '7 Days' },
-    { value: '30d', label: '30 Days' },
-    { value: '90d', label: '90 Days' },
-    { value: '1y', label: '1 Year' },
-  ];
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [dateRange]);
-
-  const fetchAnalyticsData = async () => {
-    try {
-      setLoading(true);
-      
-      const requests = [
-        api.get(`/analytics/overview?range=${dateRange}`),
-        api.get('/analytics/sentiment'),
-        api.get('/analytics/customers'),
-      ];
-
-      // Fetch event summary if we have a businessId
-      if (businessId) {
-        const daysMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
-        requests.push(api.get(`/events/summary/${businessId}?days=${daysMap[dateRange] || 30}`));
-      }
-
-      const results = await Promise.all(requests.map(p => p.catch(() => null)));
-      
-      if (results[0]?.data) setAnalyticsData(results[0].data);
-      if (results[1]?.data) setSentimentData(results[1].data);
-      if (results[2]?.data) setCustomerData(results[2].data);
-      
-      if (results[3]?.data?.success) {
-        const summary = results[3].data.summary;
-        setEventSummary(summary);
-        // Dispatch to AppContext so AICopilotDrawer can read these live
-        dispatch({
-          type: 'SET_ENGAGEMENT_METRICS',
-          payload: {
-            bounce_rate: summary.bounce_rate || 0,
-            cta_click_rate: summary.cta_click_rate || 0,
-            booking_conversion_rate: summary.booking_conversion_rate || 0,
-            page_views: summary.page_view || 0,
-            cta_clicks: summary.cta_click || 0,
-            bounces: summary.bounce || 0,
-          },
-        });
-      }
-    } catch (error) {
-      toast.error('Failed to fetch analytics data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const MetricCard = ({ title, value, icon: Icon, color, gradient, change, description }) => (
-    <div className={`card-hover bg-gradient-to-br ${gradient} text-white relative overflow-hidden`}>
-      <div className="absolute inset-0 bg-hero-pattern opacity-10"></div>
-      <div className={`absolute -top-4 -right-4 w-24 h-24 ${color} rounded-full opacity-20`}></div>
-      
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-            <Icon size={24} />
-          </div>
-          {change !== undefined && (
-            <div className="flex items-center space-x-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
-              <TrendingUp size={12} />
-              <span>{change}%</span>
-            </div>
-          )}
+const MetricCard = ({ title, value, icon: Icon, color, gradient, change, description }) => (
+  <div className={`card-hover bg-gradient-to-br ${gradient} text-white relative overflow-hidden`}>
+    <div className="absolute inset-0 bg-hero-pattern opacity-10" />
+    <div className={`absolute -top-4 -right-4 w-24 h-24 ${color} rounded-full opacity-20`} />
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+          <Icon size={24} />
         </div>
-        
-        <div>
-          <p className="text-white/80 text-sm font-medium mb-1">{title}</p>
-          <p className="text-2xl font-bold mb-1">{value}</p>
-          {description && (
-            <p className="text-white/70 text-xs">{description}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const ChartCard = ({ title, children, actions }) => (
-    <div className="card-hover">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="heading-3 text-gray-900">{title}</h3>
-        {actions && (
-          <div className="flex space-x-2">
-            {actions}
+        {change !== undefined && (
+          <div className="flex items-center space-x-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
+            <TrendingUp size={12} />
+            <span>{change}%</span>
           </div>
         )}
       </div>
-      {children}
+      <div>
+        <p className="text-white/80 text-sm font-medium mb-1">{title}</p>
+        <p className="text-2xl font-bold mb-1 tabular-nums">{value}</p>
+        {description && <p className="text-white/70 text-xs">{description}</p>}
+      </div>
     </div>
+  </div>
+);
+
+const ChartCard = ({ title, children, actions }) => (
+  <div className="card-hover">
+    <div className="flex items-center justify-between mb-6">
+      <h3 className="heading-3 text-gray-900">{title}</h3>
+      {actions && <div className="flex space-x-2">{actions}</div>}
+    </div>
+    {children}
+  </div>
+);
+
+const SentimentIndicator = ({ sentiment, score }) => {
+  const cfg =
+    sentiment === 'positive' ? { color: 'text-green-600 bg-green-100 border-green-200',  emoji: '😊' } :
+    sentiment === 'negative' ? { color: 'text-red-600 bg-red-100 border-red-200',        emoji: '😞' } :
+                               { color: 'text-gray-600 bg-gray-100 border-gray-200',      emoji: '😐' };
+  return (
+    <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full border text-xs font-medium ${cfg.color}`}>
+      <span>{cfg.emoji}</span>
+      <span>{sentiment}</span>
+      <span>({(score * 100).toFixed(0)}%)</span>
+    </span>
   );
+};
 
-  const SentimentIndicator = ({ sentiment, score }) => {
-    const getConfig = () => {
-      if (sentiment === 'positive') return { 
-        color: 'text-green-600 bg-green-100 border-green-200',
-        emoji: '😊'
-      };
-      if (sentiment === 'negative') return { 
-        color: 'text-red-600 bg-red-100 border-red-200',
-        emoji: '😞'
-      };
-      return { 
-        color: 'text-gray-600 bg-gray-100 border-gray-200',
-        emoji: '😐'
-      };
-    };
+/** "Last updated X ago" + spinner refresh button */
+const LastUpdatedBadge = ({ secondsAgo, onRefresh, refreshing }) => (
+  <div className="flex items-center space-x-1.5 text-xs text-gray-400 select-none">
+    <Clock size={12} />
+    <span>Last updated {formatSecondsAgo(secondsAgo)}</span>
+    <button
+      id="analytics-refresh-btn"
+      onClick={onRefresh}
+      title="Refresh analytics now"
+      className={`ml-1 p-1 rounded-full hover:bg-gray-100 hover:text-gray-600 transition-colors ${
+        refreshing ? 'animate-spin text-primary-500' : ''
+      }`}
+    >
+      <RefreshCw size={12} />
+    </button>
+  </div>
+);
 
-    const config = getConfig();
+// ─────────────────────────────────────────────────────────────────────────────
+// Analytics page
+// ─────────────────────────────────────────────────────────────────────────────
 
-    return (
-      <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full border text-xs font-medium ${config.color}`}>
-        <span>{config.emoji}</span>
-        <span>{sentiment}</span>
-        <span>({(score * 100).toFixed(0)}%)</span>
-      </span>
-    );
-  };
+const Analytics = () => {
+  const { user }   = useAuth();
+  const { dispatch } = useApp();
+  const businessId = user?._id || user?.id || '';
 
-  if (loading) {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [dateRange, setDateRange] = useState('30d');
+
+  // ── All data fetching is managed by this hook ────────────────────────────
+  const {
+    analyticsData,
+    sentimentData,
+    customerData,
+    eventSummary,
+    loading,
+    secondsAgo,
+    refresh,
+  } = useAnalyticsRange(dateRange, businessId);
+
+  // Keep AppContext in sync whenever eventSummary changes
+  React.useEffect(() => {
+    if (!eventSummary) return;
+    dispatch({
+      type: 'SET_ENGAGEMENT_METRICS',
+      payload: {
+        bounce_rate:              eventSummary.bounce_rate              || 0,
+        cta_click_rate:           eventSummary.cta_click_rate           || 0,
+        booking_conversion_rate:  eventSummary.booking_conversion_rate  || 0,
+        page_views:               eventSummary.page_view                || 0,
+        cta_clicks:               eventSummary.cta_click                || 0,
+        bounces:                  eventSummary.bounce                   || 0,
+      },
+    });
+  }, [eventSummary, dispatch]);
+
+  // ── Loading skeleton ──────────────────────────────────────────────────────
+  if (loading && !analyticsData) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-8 w-48 skeleton mb-2"></div>
-            <div className="h-4 w-64 skeleton"></div>
+            <div className="h-8 w-48 skeleton mb-2" />
+            <div className="h-4 w-64 skeleton" />
           </div>
-          <div className="h-10 w-32 skeleton rounded-xl"></div>
+          <div className="h-10 w-32 skeleton rounded-xl" />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 skeleton rounded-2xl"></div>
-          ))}
+          {[...Array(3)].map((_, i) => <div key={i} className="h-24 skeleton rounded-2xl" />)}
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="card">
-              <div className="h-32 skeleton rounded-xl"></div>
-            </div>
+            <div key={i} className="card"><div className="h-32 skeleton rounded-xl" /></div>
           ))}
         </div>
       </div>
@@ -196,48 +166,66 @@ const Analytics = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Header */}
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="heading-1">Analytics Dashboard</h1>
-          <p className="text-gray-600 mt-2">Deep insights into your business performance and customer behavior</p>
+          <p className="text-gray-600 mt-1">
+            Deep insights into your business performance and customer behavior
+          </p>
+          {/* Last updated indicator */}
+          <div className="mt-2">
+            <LastUpdatedBadge
+              secondsAgo={secondsAgo}
+              onRefresh={refresh}
+              refreshing={loading && !!analyticsData}
+            />
+          </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
+          {/* ── Time-range filter — triggers immediate re-fetch via hook ── */}
           <select
+            id="analytics-date-range"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="input-field w-32"
+            className="input-field w-36"
           >
-            {dateRanges.map(range => (
-              <option key={range.value} value={range.value}>{range.label}</option>
+            {DATE_RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
-          
-          <button 
-            onClick={fetchAnalyticsData}
-            className="btn-secondary"
+
+          {/* ── Manual refresh button ──────────────────────────────────── */}
+          <button
+            id="analytics-manual-refresh"
+            onClick={refresh}
+            disabled={loading}
+            className={`btn-secondary flex items-center space-x-2 ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title="Refresh all analytics data"
           >
-            <RefreshCw size={16} />
-            Refresh
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>{loading ? 'Refreshing…' : 'Refresh'}</span>
           </button>
-          
-          <button className="btn-primary">
+
+          <button className="btn-primary" id="analytics-export-btn">
             <Download size={16} />
             Export
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Tab selectors ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
+            id={`analytics-tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
             className={`card-hover text-left p-6 transition-all duration-300 relative overflow-hidden ${
-              activeTab === tab.id 
-                ? `bg-gradient-to-br ${tab.gradient} text-white shadow-colored` 
+              activeTab === tab.id
+                ? `bg-gradient-to-br ${tab.gradient} text-white shadow-colored`
                 : ''
             }`}
           >
@@ -249,33 +237,34 @@ const Analytics = () => {
                 </h3>
               </div>
             </div>
-            
             {activeTab === tab.id && (
               <div className="absolute top-2 right-2">
-                <div className="w-3 h-3 bg-white/30 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-white/30 rounded-full animate-pulse" />
               </div>
             )}
           </button>
         ))}
       </div>
 
-      {/* Overview Tab */}
-      {activeTab === 'overview' && analyticsData && (
+      {/* ══════════════════════════════════════════════════════════════════════
+          OVERVIEW TAB
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'overview' && (
         <div className="space-y-8">
-          {/* Key Metrics */}
+
+          {/* Key metrics — driven by live eventSummary where available */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Total Visitors"
-              value={analyticsData?.totalVisits?.toLocaleString() || (eventSummary?.page_view || 0).toLocaleString()}
+              value={(analyticsData?.totalVisits ?? eventSummary?.page_view ?? 0).toLocaleString()}
               icon={Eye}
               color="bg-blue-500"
               gradient="from-blue-500 to-indigo-600"
-              change={eventSummary ? undefined : 15.3}
               description={eventSummary ? `${eventSummary.page_view || 0} page views this period` : 'Unique website visitors'}
             />
             <MetricCard
               title="Customer Messages"
-              value={analyticsData?.totalMessages?.toLocaleString() || '0'}
+              value={(analyticsData?.totalMessages ?? 0).toLocaleString()}
               icon={MessageSquare}
               color="bg-green-500"
               gradient="from-green-500 to-emerald-600"
@@ -283,7 +272,7 @@ const Analytics = () => {
             />
             <MetricCard
               title="CTA Clicks"
-              value={(eventSummary?.cta_click || 0).toLocaleString()}
+              value={(eventSummary?.cta_click ?? 0).toLocaleString()}
               icon={MousePointer}
               color="bg-purple-500"
               gradient="from-purple-500 to-pink-600"
@@ -299,87 +288,53 @@ const Analytics = () => {
             />
           </div>
 
-          {/* Charts */}
+          {/* Charts — Visitor Trends & Traffic Sources */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* Visitor Trends — built from eventSummary when available, fallback to static */}
             <ChartCard title="Visitor Trends">
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={[
-                  { name: 'Mon', visitors: 1200, engagement: 68 },
-                  { name: 'Tue', visitors: 1100, engagement: 72 },
-                  { name: 'Wed', visitors: 1300, engagement: 65 },
-                  { name: 'Thu', visitors: 1400, engagement: 78 },
-                  { name: 'Fri', visitors: 1600, engagement: 82 },
-                  { name: 'Sat', visitors: 1350, engagement: 75 },
-                  { name: 'Sun', visitors: 1100, engagement: 70 },
-                ]}>
+                <AreaChart data={buildVisitorTrend(eventSummary, dateRange)}>
                   <defs>
                     <linearGradient id="visitorsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: 'white', border: 'none',
+                      borderRadius: '12px', boxShadow: '0 10px 40px -10px rgba(0,0,0,.1)',
                     }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="visitors" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    fill="url(#visitorsGradient)"
-                  />
+                  <Area type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={3} fill="url(#visitorsGradient)" name="Visitors" />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartCard>
 
+            {/* Traffic Sources — static distribution */}
             <ChartCard title="Traffic Sources">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={[
-                      { name: 'QR Codes', value: 45, color: '#3b82f6' },
-                      { name: 'Direct', value: 30, color: '#10b981' },
-                      { name: 'Social Media', value: 15, color: '#f59e0b' },
-                      { name: 'Search', value: 10, color: '#ef4444' },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
+                    data={TRAFFIC_SOURCES}
+                    cx="50%" cy="50%"
+                    innerRadius={60} outerRadius={100}
+                    paddingAngle={5} dataKey="value"
                   >
-                    {[
-                      { name: 'QR Codes', value: 45, color: '#3b82f6' },
-                      { name: 'Direct', value: 30, color: '#10b981' },
-                      { name: 'Social Media', value: 15, color: '#f59e0b' },
-                      { name: 'Search', value: 10, color: '#ef4444' },
-                    ].map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    {TRAFFIC_SOURCES.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-              
               <div className="mt-6 grid grid-cols-2 gap-4">
-                {[
-                  { name: 'QR Codes', value: 45, color: '#3b82f6' },
-                  { name: 'Direct', value: 30, color: '#10b981' },
-                  { name: 'Social Media', value: 15, color: '#f59e0b' },
-                  { name: 'Search', value: 10, color: '#ef4444' },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                {TRAFFIC_SOURCES.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                       <span className="text-sm text-gray-600">{item.name}</span>
                     </div>
                     <span className="text-sm font-semibold text-gray-900">{item.value}%</span>
@@ -389,15 +344,17 @@ const Analytics = () => {
             </ChartCard>
           </div>
 
-          {/* Performance Metrics */}
+          {/* Performance summary cards — live data where possible */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="card text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
                 <Eye className="text-white" size={24} />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Page Views</h3>
-              <p className="text-3xl font-bold text-blue-600 mb-1">25.4K</p>
-              <p className="text-sm text-gray-600">+12% vs last period</p>
+              <p className="text-3xl font-bold text-blue-600 mb-1 tabular-nums">
+                {eventSummary ? (eventSummary.page_view || 0).toLocaleString() : '—'}
+              </p>
+              <p className="text-sm text-gray-600">This period</p>
             </div>
 
             <div className="card text-center">
@@ -405,59 +362,57 @@ const Analytics = () => {
                 <Users className="text-white" size={24} />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Conversion Rate</h3>
-              <p className="text-3xl font-bold text-green-600 mb-1">4.2%</p>
-              <p className="text-sm text-gray-600">+0.8% vs last period</p>
+              <p className="text-3xl font-bold text-green-600 mb-1 tabular-nums">
+                {eventSummary ? `${eventSummary.booking_conversion_rate ?? 0}%` : '—'}
+              </p>
+              <p className="text-sm text-gray-600">Booking conversions</p>
             </div>
 
             <div className="card text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
                 <MessageSquare className="text-white" size={24} />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Avg. Session</h3>
-              <p className="text-3xl font-bold text-purple-600 mb-1">3m 24s</p>
-              <p className="text-sm text-gray-600">+15s vs last period</p>
+              <h3 className="font-semibold text-gray-900 mb-2">CTA Click Rate</h3>
+              <p className="text-3xl font-bold text-purple-600 mb-1 tabular-nums">
+                {eventSummary ? `${eventSummary.cta_click_rate ?? 0}%` : '—'}
+              </p>
+              <p className="text-sm text-gray-600">Calls to action</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sentiment Analysis Tab */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          SENTIMENT TAB
+      ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'sentiment' && sentimentData && (
         <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Sentiment Overview */}
+
+            {/* Sentiment overview */}
             <div className="card bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
               <h3 className="heading-3 text-pink-900 mb-6">Overall Sentiment</h3>
-              <div class="text-center">
+              <div className="text-center">
                 <div className="text-6xl mb-4">😊</div>
                 <div className="text-2xl font-bold text-pink-700 mb-2">Positive</div>
                 <div className="text-pink-600">Based on 156 interactions</div>
               </div>
-              
               <div className="mt-6 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-pink-700">Positive</span>
-                  <span className="text-sm font-semibold text-pink-700">68%</span>
-                </div>
-                <div className="w-full bg-pink-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-2 rounded-full" style={{ width: '68%' }}></div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Neutral</span>
-                  <span className="text-sm font-semibold text-gray-600">22%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gray-400 h-2 rounded-full" style={{ width: '22%' }}></div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-red-600">Negative</span>
-                  <span className="text-sm font-semibold text-red-600">10%</span>
-                </div>
-                <div className="w-full bg-red-200 rounded-full h-2">
-                  <div className="bg-red-500 h-2 rounded-full" style={{ width: '10%' }}></div>
-                </div>
+                {[
+                  { label: 'Positive', pct: 68, barClass: 'bg-gradient-to-r from-pink-500 to-rose-500', textClass: 'text-pink-700', bgClass: 'bg-pink-200' },
+                  { label: 'Neutral',  pct: 22, barClass: 'bg-gray-400',  textClass: 'text-gray-600',  bgClass: 'bg-gray-200' },
+                  { label: 'Negative', pct: 10, barClass: 'bg-red-500',   textClass: 'text-red-600',   bgClass: 'bg-red-200' },
+                ].map((row) => (
+                  <React.Fragment key={row.label}>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm ${row.textClass}`}>{row.label}</span>
+                      <span className={`text-sm font-semibold ${row.textClass}`}>{row.pct}%</span>
+                    </div>
+                    <div className={`w-full ${row.bgClass} rounded-full h-2`}>
+                      <div className={`${row.barClass} h-2 rounded-full`} style={{ width: `${row.pct}%` }} />
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             </div>
 
@@ -465,28 +420,23 @@ const Analytics = () => {
             <div className="lg:col-span-2">
               <ChartCard title="Recent Customer Feedback">
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {[
-                    { customer: 'Sarah Johnson', message: 'Amazing service! The team was very helpful and responsive.', sentiment: 'positive', score: 0.9, time: '2h ago' },
-                    { customer: 'Mike Chen', message: 'Good experience overall, delivery was on time.', sentiment: 'positive', score: 0.7, time: '4h ago' },
-                    { customer: 'Emma Davis', message: 'The product quality could be better for the price.', sentiment: 'neutral', score: 0.1, time: '6h ago' },
-                    { customer: 'John Smith', message: 'Excellent customer support, resolved my issue quickly!', sentiment: 'positive', score: 0.95, time: '8h ago' },
-                  ].map((feedback, index) => (
-                    <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
+                  {SAMPLE_FEEDBACK.map((fb, i) => (
+                    <div key={i} className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            {feedback.customer.split(' ').map(n => n[0]).join('')}
+                            {fb.customer.split(' ').map((n) => n[0]).join('')}
                           </div>
                           <div>
-                            <span className="font-medium text-gray-900">{feedback.customer}</span>
+                            <span className="font-medium text-gray-900">{fb.customer}</span>
                             <div className="flex items-center space-x-2 mt-1">
-                              <SentimentIndicator sentiment={feedback.sentiment} score={feedback.score} />
-                              <span className="text-xs text-gray-500">{feedback.time}</span>
+                              <SentimentIndicator sentiment={fb.sentiment} score={fb.score} />
+                              <span className="text-xs text-gray-500">{fb.time}</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm ml-13">{feedback.message}</p>
+                      <p className="text-gray-700 text-sm">{fb.message}</p>
                     </div>
                   ))}
                 </div>
@@ -496,14 +446,15 @@ const Analytics = () => {
         </div>
       )}
 
-      {/* Customer Insights Tab */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          CUSTOMER INSIGHTS TAB
+      ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'customers' && customerData && (
         <div className="space-y-8">
-          {/* Customer Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <MetricCard
               title="Total Customers"
-              value="1,234"
+              value={(customerData?.totalCustomers ?? 0).toLocaleString() || '1,234'}
               icon={Users}
               color="bg-blue-500"
               gradient="from-blue-500 to-indigo-600"
@@ -512,16 +463,16 @@ const Analytics = () => {
             />
             <MetricCard
               title="Customer Lifetime Value"
-              value="$312"
+              value={customerData?.avgLifetimeValue ? `$${customerData.avgLifetimeValue}` : '$312'}
               icon={TrendingUp}
-              color="bg-green-500" 
+              color="bg-green-500"
               gradient="from-green-500 to-emerald-600"
               change={8.3}
               description="Average per customer"
             />
             <MetricCard
               title="Retention Rate"
-              value="84%"
+              value={customerData?.retentionRate ? `${customerData.retentionRate}%` : '84%'}
               icon={Heart}
               color="bg-purple-500"
               gradient="from-purple-500 to-pink-600"
@@ -530,18 +481,11 @@ const Analytics = () => {
             />
           </div>
 
-          {/* Customer Growth & Engagement */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Customer Growth — built from customerData or fallback */}
             <ChartCard title="Customer Growth">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={[
-                  { month: 'Jan', customers: 120 },
-                  { month: 'Feb', customers: 150 },
-                  { month: 'Mar', customers: 180 },
-                  { month: 'Apr', customers: 220 },
-                  { month: 'May', customers: 280 },
-                  { month: 'Jun', customers: 350 },
-                ]}>
+                <BarChart data={buildCustomerGrowth(customerData)}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
@@ -551,27 +495,23 @@ const Analytics = () => {
               </ResponsiveContainer>
             </ChartCard>
 
+            {/* Top engaged customers */}
             <ChartCard title="Top Engaged Customers">
               <div className="space-y-4">
-                {[
-                  { name: 'Sarah Johnson', email: 'sarah@email.com', interactions: 24, value: '$450' },
-                  { name: 'Mike Chen', email: 'mike@email.com', interactions: 18, value: '$320' },
-                  { name: 'Emma Davis', email: 'emma@email.com', interactions: 15, value: '$280' },
-                  { name: 'John Smith', email: 'john@email.com', interactions: 12, value: '$190' },
-                ].map((customer, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100">
+                {(customerData?.topCustomers ?? SAMPLE_CUSTOMERS).map((c, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                        {index + 1}
+                        {i + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-sm text-gray-600">{customer.email}</p>
+                        <p className="font-medium text-gray-900">{c.name}</p>
+                        <p className="text-sm text-gray-600">{c.email}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">{customer.value}</p>
-                      <p className="text-sm text-gray-600">{customer.interactions} interactions</p>
+                      <p className="font-semibold text-gray-900">{c.value}</p>
+                      <p className="text-sm text-gray-600">{c.interactions} interactions</p>
                     </div>
                   </div>
                 ))}
@@ -580,8 +520,74 @@ const Analytics = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers — build chart data from live API response with sensible fallbacks
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TRAFFIC_SOURCES = [
+  { name: 'QR Codes',     value: 45, color: '#3b82f6' },
+  { name: 'Direct',       value: 30, color: '#10b981' },
+  { name: 'Social Media', value: 15, color: '#f59e0b' },
+  { name: 'Search',       value: 10, color: '#ef4444' },
+];
+
+const SAMPLE_FEEDBACK = [
+  { customer: 'Sarah Johnson', message: 'Amazing service! The team was very helpful and responsive.', sentiment: 'positive', score: 0.9,  time: '2h ago' },
+  { customer: 'Mike Chen',     message: 'Good experience overall, delivery was on time.',            sentiment: 'positive', score: 0.7,  time: '4h ago' },
+  { customer: 'Emma Davis',    message: 'The product quality could be better for the price.',        sentiment: 'neutral',  score: 0.1,  time: '6h ago' },
+  { customer: 'John Smith',    message: 'Excellent customer support, resolved my issue quickly!',   sentiment: 'positive', score: 0.95, time: '8h ago' },
+];
+
+const SAMPLE_CUSTOMERS = [
+  { name: 'Sarah Johnson', email: 'sarah@email.com', interactions: 24, value: '$450' },
+  { name: 'Mike Chen',     email: 'mike@email.com',  interactions: 18, value: '$320' },
+  { name: 'Emma Davis',    email: 'emma@email.com',  interactions: 15, value: '$280' },
+  { name: 'John Smith',    email: 'john@email.com',  interactions: 12, value: '$190' },
+];
+
+/** Build a simple visitor trend chart from the event summary total + range */
+function buildVisitorTrend(summary, range) {
+  const DAYS_MAP = { '7d': 7, '30d': 30, '90d': 90, '1y': 52 };
+  const points   = DAYS_MAP[range] ?? 7;
+  const total    = summary?.page_view ?? 0;
+
+  if (!total) {
+    // Fallback: deterministic demo data so the chart is never empty
+    return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((name, i) => ({
+      name,
+      visitors: [1200, 1100, 1300, 1400, 1600, 1350, 1100][i],
+    }));
+  }
+
+  // Distribute total page views across the selected period with slight variance
+  const labels = range === '7d'
+    ? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+    : range === '1y'
+    ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    : Array.from({ length: Math.min(points, 12) }, (_, i) => `W${i + 1}`);
+
+  const base  = Math.round(total / labels.length);
+  return labels.map((name, i) => ({
+    name,
+    visitors: Math.max(0, base + Math.round((Math.sin(i) * base * 0.2))),
+  }));
+}
+
+function buildCustomerGrowth(customerData) {
+  if (customerData?.growthData) return customerData.growthData;
+  return [
+    { month: 'Jan', customers: 120 },
+    { month: 'Feb', customers: 150 },
+    { month: 'Mar', customers: 180 },
+    { month: 'Apr', customers: 220 },
+    { month: 'May', customers: 280 },
+    { month: 'Jun', customers: 350 },
+  ];
+}
 
 export default Analytics;

@@ -40,7 +40,13 @@ def create_app(config_class=Config):
          supports_credentials=True)
     
     mail.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",
+        ping_timeout=120,
+        ping_interval=25,
+        always_connect=True
+    )
     
     # Register Blueprints
     from app.routes.auth import auth_bp
@@ -94,6 +100,12 @@ def create_app(config_class=Config):
     init_beauty_salon_routes(socketio, mongo.cx)
 
     # WebSocket event handlers
+    @socketio.on_error_default
+    def default_error_handler(e):
+        import logging
+        logging.getLogger("app").error(f"SocketIO Error: {e}")
+        print(f"SocketIO Error: {e}")
+
     @socketio.on('connect')
     def handle_connect():
         print('Client connected')

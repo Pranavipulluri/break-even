@@ -13,7 +13,7 @@ import requests
 import json
 import time
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pymongo import MongoClient
 
 # ================================================================
@@ -567,7 +567,7 @@ def step7_analytics_events():
             "event_type": ev["event_type"],
             "event_data": ev["event_data"],
             "source_url": "https://test-spa.netlify.app",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         url = f"{BASE_URL}/events/ingest"
@@ -575,7 +575,7 @@ def step7_analytics_events():
         h.update(headers_extra)
         try:
             r = requests.post(url, json=payload, headers=h, timeout=10)
-            check(f"Ingest {ev['event_type']}", r.status_code == 200,
+            check(f"Ingest {ev['event_type']}", r.status_code == 202,
                   f"status={r.status_code}, body={r.text[:100]}")
         except Exception as e:
             check(f"Ingest {ev['event_type']}", False, str(e))

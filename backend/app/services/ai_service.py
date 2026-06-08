@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from flask import current_app
 import json
 import random
@@ -11,22 +12,23 @@ import base64
 class AIService:
     def __init__(self):
         self.api_key = current_app.config.get('GEMINI_API_KEY')
-        self.model_name = current_app.config.get('GEMINI_MODEL', 'gemini-1.5-flash')
+        self.model_name = current_app.config.get('GEMINI_MODEL', 'models/gemini-2.0-flash')
         self.temperature = float(current_app.config.get('GEMINI_TEMPERATURE', 0.7))
         self.max_tokens = int(current_app.config.get('GEMINI_MAX_TOKENS', 1000))
         
         if self.api_key:
             try:
-                genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel(self.model_name)
+                self._client = genai.Client(api_key=self.api_key)
                 self.use_gemini = True
-                print("✅ Gemini AI initialized successfully")
+                print("[OK] Gemini AI initialized successfully")
             except Exception as e:
-                print(f"❌ Failed to initialize Gemini AI: {e}")
+                print(f"[ERROR] Failed to initialize Gemini AI: {e}")
+                self._client = None
                 self.use_gemini = False
         else:
+            self._client = None
             self.use_gemini = False
-            print("⚠️ Warning: Gemini API key not found. Using template responses.")
+            print("[WARN] Gemini API key not found. Using template responses.")
     
     def generate_content(self, content_type, prompt, business_context=''):
         """Generate content using Gemini AI"""
@@ -63,14 +65,14 @@ Please create professional, engaging content that is appropriate for the busines
 """
         
         try:
-            response = self.model.generate_content(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=self.temperature,
                     max_output_tokens=self.max_tokens,
-                )
+                ),
             )
-            
             return response.text.strip()
             
         except Exception as e:
@@ -104,12 +106,13 @@ Please create professional, engaging content that is appropriate for the busines
         """
         
         try:
-            response = self.model.generate_content(
-                gemini_prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=gemini_prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=0.7,
                     max_output_tokens=500,
-                )
+                ),
             )
             
             # Return a data URL with the description (placeholder)
@@ -179,12 +182,13 @@ Return ONLY the JSON, no additional text.
         """
         
         try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=0.7,
                     max_output_tokens=1200,
-                )
+                ),
             )
             
             content = response.text.strip()
@@ -249,12 +253,13 @@ Return ONLY the JSON, no additional text.
         """
         
         try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=0.3,
                     max_output_tokens=800,
-                )
+                ),
             )
             
             content = response.text.strip()
@@ -320,12 +325,13 @@ Previous conversation context:
         full_prompt = f"{context_prompt}\n\nCurrent user question: {message}\n\nProvide a helpful response:"
         
         try:
-            response = self.model.generate_content(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=0.7,
                     max_output_tokens=300,
-                )
+                ),
             )
             
             return response.text.strip()
