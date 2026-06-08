@@ -168,9 +168,21 @@ def apply_pending_patch():
 
             # Store a manual-edit memory record
             site_doc = mongo.db.child_websites.find_one(
-                {"owner_id": b_id_str}, {"industry_type": 1}
+                {"owner_id": b_id_str}, {"industry_type": 1, "business_type": 1}
             )
-            industry = (site_doc or {}).get("industry_type", "general")
+            if not site_doc:
+                from bson import ObjectId
+                try:
+                    site_doc = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(b_id_str)}, {"industry_type": 1, "business_type": 1}
+                    )
+                except Exception:
+                    pass
+            industry = (
+                (site_doc or {}).get("industry_type")
+                or (site_doc or {}).get("business_type")
+                or "general"
+            )
 
             BusinessMemory.add_memory(
                 business_id=business_id,
@@ -246,9 +258,21 @@ def apply_pending_patch():
         expected_gain = float(gain_match.group(1)) if gain_match else 0.0
 
         site_doc = mongo.db.child_websites.find_one(
-            {"owner_id": b_id_str}, {"industry_type": 1}
+            {"owner_id": b_id_str}, {"industry_type": 1, "business_type": 1}
         )
-        industry = (site_doc or {}).get("industry_type", "general")
+        if not site_doc:
+            from bson import ObjectId
+            try:
+                site_doc = mongo.db.child_websites.find_one(
+                    {"owner_id": ObjectId(b_id_str)}, {"industry_type": 1, "business_type": 1}
+                )
+            except Exception:
+                pass
+        industry = (
+            (site_doc or {}).get("industry_type")
+            or (site_doc or {}).get("business_type")
+            or "general"
+        )
 
         deploy_ref = updated_schema.get("deploy_ref")
 

@@ -6,7 +6,7 @@ Provides AI-powered content generation, business insights, and text analysis
 import requests
 from flask import current_app
 import json
-import google.generativeai as genai
+# google.genai SDK not used here — this service uses the REST API directly via requests
 import re
 from datetime import datetime
 from app import mongo

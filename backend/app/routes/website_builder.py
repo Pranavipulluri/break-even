@@ -120,6 +120,12 @@ def create_website():
             **website.to_dict(),
             'owner_id': ObjectId(current_user_id)
         })
+
+        # Generate and save default website schema
+        from app.services.patch_engine import PatchEngine
+        demo_schema = PatchEngine.create_default_schema(str(current_user_id))
+        mongo.db.website_schemas.insert_one(demo_schema)
+
         
         # Generate website URL
         website_url = f"{current_app.config['WEBSITE_BASE_URL']}/{current_user_id}"
@@ -430,6 +436,12 @@ def create_enhanced_website():
             **website.to_dict(),
             'owner_id': ObjectId(current_user_id)
         })
+
+        # Generate and save default website schema
+        from app.services.patch_engine import PatchEngine
+        demo_schema = PatchEngine.create_default_schema(str(current_user_id))
+        mongo.db.website_schemas.insert_one(demo_schema)
+
         
         # Generate website URL
         website_url = f"{current_app.config['WEBSITE_BASE_URL']}/{current_user_id}"

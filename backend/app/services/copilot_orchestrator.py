@@ -33,7 +33,8 @@ from app.services.patch_engine import PatchEngine
 from app.services.patch_validator import PatchValidator
 from app.services.business_memory import BusinessMemory
 from app.services.schema_renderer import SchemaRenderer
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from flask import current_app
 
 logger = logging.getLogger(__name__)
@@ -267,7 +268,7 @@ class BusinessCopilot:
 
             return final_proposal
 
-        except Exception as e:
+        except BaseException as e:
             logger.error(f"Error in orchestrator reflective loop: {e}")
             self.stream_log("agent:error", "error", f"Reflective loop failed: {str(e)}")
             return {"success": False, "error": str(e)}
@@ -344,14 +345,17 @@ class BusinessCopilot:
         """
         api_key = current_app.config.get("GEMINI_API_KEY")
         if not api_key:
+            logger.info(f"Gemini API key missing. Storing success memory in fallback path for business {self.business_id}...")
+            BusinessMemory.add_success_memory(self.business_id, active_schema, metrics)
+            logger.info(f"✅ Stored success memory in fallback path for business {self.business_id}")
             return self._fallback_hypothesis(user_command)
 
         try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            res = model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
+            client = genai.Client(api_key=api_key)
+            res = client.models.generate_content(
+                model="models/gemini-2.0-flash",
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
                     temperature=0.3,
                     response_mime_type="application/json",
                 ),
@@ -360,7 +364,11 @@ class BusinessCopilot:
             return data
         except Exception as e:
             logger.error(f"Gemini hypothesis generation failed: {e}. Using fallback.")
+            logger.info(f"Storing success memory in fallback path for business {self.business_id}...")
+            BusinessMemory.add_success_memory(self.business_id, active_schema, metrics)
+            logger.info(f"✅ Stored success memory in fallback path for business {self.business_id}")
             return self._fallback_hypothesis(user_command)
+
 
     def _fallback_hypothesis(self, user_command):
         """Vertical-aware deterministic fallback when Gemini is unavailable."""
@@ -368,10 +376,18 @@ class BusinessCopilot:
         industry = "general"
         try:
             site_doc = mongo.db.child_websites.find_one(
-                {"owner_id": self.business_id}, {"industry_type": 1}
+                {"owner_id": self.business_id}, {"industry_type": 1, "business_type": 1}
             )
+            if not site_doc:
+                from bson import ObjectId
+                try:
+                    site_doc = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(self.business_id)}, {"industry_type": 1, "business_type": 1}
+                    )
+                except Exception:
+                    pass
             if site_doc:
-                industry = site_doc.get("industry_type", "general")
+                industry = site_doc.get("industry_type") or site_doc.get("business_type") or "general"
         except Exception as e:
             logger.warning(f"Could not look up industry for fallback: {e}")
 
@@ -604,9 +620,24 @@ class BusinessCopilot:
     # PRIORITY 3: Deployment Tool
     def _tools_deployment(self, active_schema):
         """Triggers continuous patch publishing to disk and domain locks."""
-        html = SchemaRenderer.render(active_schema)
-        PatchEngine.write_website_to_disk(self.business_id, html)
-        return True
+        try:
+            html = SchemaRenderer.render(active_schema)
+            PatchEngine.write_website_to_disk(self.business_id, html)
+            
+            # Non-blocking Netlify deployment check/attempt
+            try:
+                deploy_ref = PatchEngine._deploy_to_netlify(self.business_id, html)
+                if deploy_ref is None:
+                    self.stream_log("agent:error", "error", "Netlify deploy returned empty reference (skipped or failed).")
+            except BaseException as netlify_err:
+                logger.error(f"Netlify deploy failed in orchestrator: {netlify_err}")
+                self.stream_log("agent:error", "error", f"Netlify deploy failed: {str(netlify_err)}")
+                
+            return True
+        except BaseException as e:
+            logger.error(f"Deployment tool error: {e}")
+            self.stream_log("agent:error", "error", f"Deployment tool failed: {str(e)}")
+            return False
 
     # PRIORITY 4: Notification Tool (handled via stream_log)
 
@@ -631,11 +662,11 @@ class BusinessCopilot:
         api_key = current_app.config.get("GEMINI_API_KEY")
         if api_key:
             try:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                res = model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
+                client = genai.Client(api_key=api_key)
+                res = client.models.generate_content(
+                    model="models/gemini-2.0-flash",
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
                         temperature=0.7,
                         response_mime_type="application/json",
                     ),

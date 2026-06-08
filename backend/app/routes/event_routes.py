@@ -58,6 +58,15 @@ def ingest_event():
                 {"_id": 1},
             )
             if not site:
+                from bson import ObjectId
+                try:
+                    site = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(b_id_str), "api_key": api_key},
+                        {"_id": 1},
+                    )
+                except Exception:
+                    pass
+            if not site:
                 return jsonify({"success": False, "error": "Invalid API key"}), 403
         else:
             # No API key — only allow in development mode AND only if the business exists
@@ -74,10 +83,19 @@ def ingest_event():
                 {"owner_id": b_id_str}, {"_id": 1}
             )
             if not site:
+                from bson import ObjectId
+                try:
+                    site = mongo.db.child_websites.find_one(
+                        {"owner_id": ObjectId(b_id_str)}, {"_id": 1}
+                    )
+                except Exception:
+                    pass
+            if not site:
                 return jsonify({
                     "success": False,
                     "error": f"No child website found for business '{b_id_str}'. Cannot ingest events.",
                 }), 404
+
 
         success, error = event_collector.ingest_event(
             business_id=business_id,
