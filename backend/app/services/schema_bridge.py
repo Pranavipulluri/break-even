@@ -273,22 +273,87 @@ class SchemaBridge:
                 {"business_id": b_id_str, "is_active": True}
             )
 
+            deployment_id = deploy_result.get("deploy", {}).get("id")
+
             if existing:
-                # Update the existing schema with new deployment info
+                # Increment versions
+                new_schema_version = int(existing.get("schema_version", 1)) + 1
+                new_version = float(existing.get("version", 1.0)) + 1.0
+                
+                schema["schema_version"] = new_schema_version
+                schema["version"] = new_version
+                schema["deployment_id"] = deployment_id
+                schema["updated_at"] = datetime.now(timezone.utc)
+
+                # Update the active schema in database
                 mongo.db.website_schemas.update_one(
                     {"_id": existing["_id"]},
                     {"$set": {
-                        "deployment_id": deploy_result.get("deploy", {}).get("id"),
-                        "updated_at": datetime.now(timezone.utc),
+                        "theme": schema["theme"],
+                        "seo": schema["seo"],
+                        "sections": schema["sections"],
+                        "schema_version": new_schema_version,
+                        "version": new_version,
+                        "deployment_id": deployment_id,
+                        "updated_at": schema["updated_at"]
                     }}
                 )
-                schema = existing
-                logger.info(f"Updated existing schema for business {b_id_str}")
+                logger.info(f"✅ Updated existing schema for business {b_id_str} to v{new_schema_version}")
+                
+                # Write snapshot to history
+                patch_applied = {"action": "deploy_update", "reason": "Redeployed from Website Builder with updated configuration"}
+                patch_metadata = {
+                    "patch_name": "redeploy",
+                    "trigger_reason": "Redeployed from Website Builder with updated settings",
+                    "agent_name": "WebsiteBuilder",
+                    "affected_section": "global",
+                    "expected_impact": "Profile update and theme sync",
+                    "confidence_score": 100,
+                    "before_metrics": {},
+                }
+                history_record = {
+                    "business_id": b_id_str,
+                    "schema_version": new_schema_version,
+                    "version": new_version,
+                    "schema_snapshot": schema,
+                    "timestamp": datetime.now(timezone.utc),
+                    "patch_applied": patch_applied,
+                    "patch_metadata": patch_metadata,
+                    "git_ref": None,
+                    "deploy_ref": deployment_id,
+                }
+                mongo.db.website_history.insert_one(history_record)
             else:
-                # Insert new schema
-                schema["deployment_id"] = deploy_result.get("deploy", {}).get("id")
+                # Insert new schema (Version 1)
+                schema["schema_version"] = 1
+                schema["version"] = 1.0
+                schema["deployment_id"] = deployment_id
                 mongo.db.website_schemas.insert_one(schema)
-                logger.info(f"✅ Created website_schema for business {b_id_str}")
+                logger.info(f"✅ Created website_schema for business {b_id_str} (v1)")
+                
+                # Write initial snapshot to history
+                patch_applied = {"action": "initial_deploy", "reason": "Initial deployment from Website Builder"}
+                patch_metadata = {
+                    "patch_name": "initial_deployment",
+                    "trigger_reason": "Initial website setup and deployment",
+                    "agent_name": "WebsiteBuilder",
+                    "affected_section": "global",
+                    "expected_impact": "Initial setup completed",
+                    "confidence_score": 100,
+                    "before_metrics": {},
+                }
+                history_record = {
+                    "business_id": b_id_str,
+                    "schema_version": 1,
+                    "version": 1.0,
+                    "schema_snapshot": schema,
+                    "timestamp": datetime.now(timezone.utc),
+                    "patch_applied": patch_applied,
+                    "patch_metadata": patch_metadata,
+                    "git_ref": None,
+                    "deploy_ref": deployment_id,
+                }
+                mongo.db.website_history.insert_one(history_record)
 
             # 3. Extract deployment identifiers
             netlify_site_id = None

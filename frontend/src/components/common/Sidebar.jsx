@@ -224,21 +224,7 @@ const Sidebar = () => {
           </div>
         )}
 
-        {/* Bottom Section */}
-        {!isCollapsed && (
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="card-gradient p-4 text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl mx-auto mb-3 flex items-center justify-center">
-                <Sparkles size={20} className="text-white" />
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-1">Upgrade to Pro</h4>
-              <p className="text-xs text-gray-600 mb-3">Unlock advanced AI features</p>
-              <button className="w-full btn-primary btn-sm">
-                Upgrade Now
-              </button>
-            </div>
-          </div>
-        )}
+
       </aside>
 
       {/* Backdrop for mobile */}

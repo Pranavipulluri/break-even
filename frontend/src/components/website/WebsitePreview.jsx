@@ -5,6 +5,7 @@ const WebsitePreview = ({ websiteData, isVisible = true, onToggle }) => {
   if (!websiteData) return null;
 
   const {
+    _id = null,
     website_name = 'My Website',
     business_type = 'Business',
     area = 'Local Area',
@@ -97,6 +98,10 @@ const WebsitePreview = ({ websiteData, isVisible = true, onToggle }) => {
     );
   }
 
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const backendBase = API_BASE_URL.replace(/\/api$/, '');
+  const iframeUrl = _id ? `${backendBase}/api/site/${_id}` : null;
+
   return (
     <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
       <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
@@ -107,7 +112,7 @@ const WebsitePreview = ({ websiteData, isVisible = true, onToggle }) => {
             <div className="w-3 h-3 bg-green-400 rounded-full"></div>
           </div>
           <div className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border">
-            {website_url || `preview-${website_name.toLowerCase().replace(/\s+/g, '-')}.com`}
+            {website_url || (iframeUrl ? `preview-site-${_id.slice(-6)}.com` : `preview-${website_name.toLowerCase().replace(/\s+/g, '-')}.com`)}
           </div>
           {website_url && (
             <a
@@ -133,11 +138,13 @@ const WebsitePreview = ({ websiteData, isVisible = true, onToggle }) => {
       
       <div className="relative">
         <iframe
-          srcDoc={generatePreviewHTML()}
-          className="w-full border-0"
+          key={iframeUrl || 'fallback'}
+          src={iframeUrl || undefined}
+          srcDoc={!iframeUrl ? generatePreviewHTML() : undefined}
+          className="w-full border-0 animate-fade-in"
           style={{ height: '600px' }}
           title="Website Preview"
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts allow-forms"
         />
         
         {!website_url && (

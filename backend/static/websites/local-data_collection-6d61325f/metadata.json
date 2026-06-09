@@ -1,0 +1,14 @@
+{
+  "title": "pranavi bakery",
+  "description": "Join the pranavi bakery community and share your valuable feedback with us.",
+  "content": "Welcome to pranavi bakery! We're building something amazing and we'd love to have you as part of our journey. Sign up to stay updated and let us know what you think.",
+  "website_type": "data_collection",
+  "business_id": "6a13fc48e3709dfeb6ef487b",
+  "created_at": "2026-06-09T08:12:11.193550",
+  "local_deployment": true,
+  "features": [
+    "user_registration",
+    "feedback_collection",
+    "data_analytics"
+  ]
+}
