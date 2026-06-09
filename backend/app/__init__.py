@@ -33,6 +33,16 @@ def create_app(config_class=Config):
         "http://127.0.0.1:3003"
     ]
     
+    import os
+    frontend_url = app.config.get('FRONTEND_URL') or os.environ.get('FRONTEND_URL')
+    if frontend_url:
+        if frontend_url not in allowed_origins:
+            allowed_origins.append(frontend_url)
+        if frontend_url.endswith('/'):
+            stripped = frontend_url[:-1]
+            if stripped not in allowed_origins:
+                allowed_origins.append(stripped)
+                
     CORS(app, 
          origins=allowed_origins,
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

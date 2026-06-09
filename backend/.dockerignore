@@ -1,0 +1,29 @@
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases and dynamic data
+mongodb_data/
+translation_cache.json
+
+# Environment/Secrets
+.env
+
+# Git files
+.git
+.gitignore
+
+# Frontend files if overlapping (or Node modules)
+node_modules/
+package-lock.json
