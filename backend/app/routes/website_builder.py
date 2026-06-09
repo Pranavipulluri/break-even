@@ -81,9 +81,12 @@ def create_website():
             if field not in data:
                 return jsonify({'error': f'{field} is required'}), 400
         
-        # Check if user already has a website
+        # Check if user already has a website (support both string and ObjectId owner_id)
         existing_website = mongo.db.child_websites.find_one({
-            'owner_id': ObjectId(current_user_id)
+            '$or': [
+                {'owner_id': str(current_user_id)},
+                {'owner_id': ObjectId(current_user_id)}
+            ]
         })
         
         if existing_website:
@@ -121,10 +124,34 @@ def create_website():
             'owner_id': ObjectId(current_user_id)
         })
 
-        # Generate and save default website schema
-        from app.services.patch_engine import PatchEngine
-        demo_schema = PatchEngine.create_default_schema(str(current_user_id))
+        # Generate and save default website schema dynamically based on user inputs
+        from app.services.schema_bridge import SchemaBridge
+        demo_schema = SchemaBridge.build_schema_dict(str(current_user_id), data)
+        demo_schema["schema_version"] = 1
+        demo_schema["version"] = 1.0
         mongo.db.website_schemas.insert_one(demo_schema)
+
+        # Write initial snapshot to history
+        history_record = {
+            "business_id": str(current_user_id),
+            "schema_version": 1,
+            "version": 1.0,
+            "schema_snapshot": demo_schema,
+            "timestamp": datetime.utcnow(),
+            "patch_applied": {"action": "initial_save", "reason": "Initial creation from Website Builder"},
+            "patch_metadata": {
+                "patch_name": "initial_creation",
+                "trigger_reason": "Initial creation from Website Builder",
+                "agent_name": "WebsiteBuilder",
+                "affected_section": "global",
+                "expected_impact": "Initial creation Completed",
+                "confidence_score": 100,
+                "before_metrics": {},
+            },
+            "git_ref": None,
+            "deploy_ref": None,
+        }
+        mongo.db.website_history.insert_one(history_record)
 
         
         # Generate website URL
@@ -168,9 +195,12 @@ def update_website():
         current_user_id = get_jwt_identity()
         data = request.get_json()
         
-        # Find existing website
+        # Find existing website (support both string and ObjectId owner_id)
         website = mongo.db.child_websites.find_one({
-            'owner_id': ObjectId(current_user_id)
+            '$or': [
+                {'owner_id': str(current_user_id)},
+                {'owner_id': ObjectId(current_user_id)}
+            ]
         })
         
         if not website:
@@ -202,15 +232,95 @@ def update_website():
             )
             update_data['generated_content'] = generated_content
         
-        # Update in database
+        # Update in database (support both string and ObjectId owner_id)
         mongo.db.child_websites.update_one(
-            {'owner_id': ObjectId(current_user_id)},
+            {'$or': [
+                {'owner_id': str(current_user_id)},
+                {'owner_id': ObjectId(current_user_id)}
+            ]},
             {'$set': update_data}
         )
+
+        # Update schema version and save history
+        from app.services.schema_bridge import SchemaBridge
+        schema = SchemaBridge.build_schema_dict(str(current_user_id), data)
         
-        # Get updated website
+        existing_schema = mongo.db.website_schemas.find_one(
+            {"business_id": str(current_user_id), "is_active": True}
+        )
+        
+        if existing_schema:
+            new_schema_version = int(existing_schema.get("schema_version", 1)) + 1
+            new_version = float(existing_schema.get("version", 1.0)) + 1.0
+            
+            schema["schema_version"] = new_schema_version
+            schema["version"] = new_version
+            schema["updated_at"] = datetime.utcnow()
+            
+            mongo.db.website_schemas.update_one(
+                {"_id": existing_schema["_id"]},
+                {"$set": {
+                    "theme": schema["theme"],
+                    "seo": schema["seo"],
+                    "sections": schema["sections"],
+                    "schema_version": new_schema_version,
+                    "version": new_version,
+                    "updated_at": schema["updated_at"]
+                }}
+            )
+            
+            history_record = {
+                "business_id": str(current_user_id),
+                "schema_version": new_schema_version,
+                "version": new_version,
+                "schema_snapshot": schema,
+                "timestamp": datetime.utcnow(),
+                "patch_applied": {"action": "update_save", "reason": "Updated website configuration via Website Builder"},
+                "patch_metadata": {
+                    "patch_name": "website_update",
+                    "trigger_reason": "Updated website configuration via Website Builder",
+                    "agent_name": "WebsiteBuilder",
+                    "affected_section": "global",
+                    "expected_impact": "Updated website settings applied",
+                    "confidence_score": 100,
+                    "before_metrics": {},
+                },
+                "git_ref": None,
+                "deploy_ref": existing_schema.get("deployment_id"),
+            }
+            mongo.db.website_history.insert_one(history_record)
+        else:
+            schema["schema_version"] = 1
+            schema["version"] = 1.0
+            mongo.db.website_schemas.insert_one(schema)
+            
+            history_record = {
+                "business_id": str(current_user_id),
+                "schema_version": 1,
+                "version": 1.0,
+                "schema_snapshot": schema,
+                "timestamp": datetime.utcnow(),
+                "patch_applied": {"action": "initial_save", "reason": "Initial save from Website Builder"},
+                "patch_metadata": {
+                    "patch_name": "initial_creation",
+                    "trigger_reason": "Initial save from Website Builder",
+                    "agent_name": "WebsiteBuilder",
+                    "affected_section": "global",
+                    "expected_impact": "Initial save completed",
+                    "confidence_score": 100,
+                    "before_metrics": {},
+                },
+                "git_ref": None,
+                "deploy_ref": None,
+            }
+            mongo.db.website_history.insert_one(history_record)
+        
+        # Get updated website (support both string and ObjectId owner_id)
         updated_website = mongo.db.child_websites.find_one({
-            'owner_id': ObjectId(current_user_id)
+            '$or': [
+                {'owner_id': str(current_user_id)},
+                {'owner_id': ObjectId(current_user_id)}
+            ]
         })
         updated_website['_id'] = str(updated_website['_id'])
         updated_website['owner_id'] = str(updated_website['owner_id'])
@@ -229,8 +339,12 @@ def get_my_website():
     try:
         current_user_id = get_jwt_identity()
         
+        # support both string and ObjectId owner_id
         website = mongo.db.child_websites.find_one({
-            'owner_id': ObjectId(current_user_id)
+            '$or': [
+                {'owner_id': str(current_user_id)},
+                {'owner_id': ObjectId(current_user_id)}
+            ]
         })
         
         if not website:

@@ -251,7 +251,12 @@ class NetlifyService:
             files = {
                 'index.html': self.generate_website_html(business_name, website_content),
                 'style.css': self.generate_css(),
-                '_redirects': '/*    /index.html   200'  # SPA redirect rules
+                '_redirects': '/*    /index.html   200',  # SPA redirect rules
+                '_headers': '''/index.html
+  Content-Type: text/html; charset=UTF-8
+/
+  Content-Type: text/html; charset=UTF-8
+'''
             }
             
             # Deploy the site
@@ -1420,91 +1425,49 @@ exports.handler = async (event, context) => {
             return self.get_simple_recent_feedback_function()
     
     def generate_website_html(self, business_name, content):
-        """Generate HTML content for the website (BASIC VERSION)"""
-        return f"""<!DOCTYPE html>
+        """Generate premium HTML content using SchemaRenderer + SchemaBridge.
+
+        Instead of a hardcoded basic template, this now:
+        1. Builds a proper JSON schema from the business info
+        2. Renders it through the SchemaRenderer (premium Tailwind templates)
+        3. Injects the child→parent analytics tracking snippet
+        """
+        try:
+            from app.services.schema_bridge import SchemaBridge
+            from app.services.schema_renderer import SchemaRenderer
+            from app.services.tracking_snippet import TrackingSnippet
+
+            # Merge business_name into content for the bridge
+            bridge_info = dict(content) if isinstance(content, dict) else {}
+            bridge_info.setdefault("website_name", business_name)
+            bridge_info.setdefault("site_name", business_name)
+
+            schema = SchemaBridge.build_schema_dict(
+                business_id=bridge_info.get("business_id", ""),
+                business_info=bridge_info,
+            )
+            html = SchemaRenderer.render(schema)
+
+            # Inject tracking snippet for child→parent analytics
+            html = TrackingSnippet.inject(
+                html,
+                business_id=bridge_info.get("business_id", ""),
+            )
+            return html
+
+        except Exception as e:
+            # Fallback: if SchemaRenderer fails, return a minimal valid page
+            import logging
+            logging.getLogger(__name__).warning(
+                f"SchemaRenderer fallback for Netlify deploy: {e}"
+            )
+            return f"""<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{business_name}</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <header>
-        <nav class="container">
-            <div class="logo">{business_name}</div>
-            <div class="nav-links">
-                <a href="#about">About</a>
-                <a href="#services">Services</a>
-                <a href="#contact">Contact</a>
-            </div>
-        </nav>
-    </header>
-
-    <main>
-        <section class="hero">
-            <div class="container">
-                <h1>{content.get('hero_title', f'Welcome to {business_name}') if isinstance(content, dict) else f'Welcome to {business_name}'}</h1>
-                <p>{content.get('hero_subtitle', 'Your trusted business partner') if isinstance(content, dict) else 'Your trusted business partner'}</p>
-                <a href="#contact" class="btn-primary">Get Started</a>
-            </div>
-        </section>
-
-        <section id="about" class="section">
-            <div class="container">
-                <h2>About Us</h2>
-                <p>{content.get('about_us', f'{business_name} is dedicated to providing excellent service to our customers.') if isinstance(content, dict) else f'{business_name} is dedicated to providing excellent service to our customers.'}</p>
-            </div>
-        </section>
-
-        <section id="services" class="section bg-light">
-            <div class="container">
-                <h2>Our Services</h2>
-                <p>{content.get('services_intro', 'We offer a comprehensive range of services to meet your needs.') if isinstance(content, dict) else 'We offer a comprehensive range of services to meet your needs.'}</p>
-                <div class="services-grid">
-                    <div class="service-card">
-                        <h3>Professional Service</h3>
-                        <p>Expert solutions tailored to your specific needs and requirements.</p>
-                    </div>
-                    <div class="service-card">
-                        <h3>Quality Assurance</h3>
-                        <p>We ensure the highest quality standards in everything we deliver.</p>
-                    </div>
-                    <div class="service-card">
-                        <h3>Customer Support</h3>
-                        <p>24/7 support to help you succeed and overcome any challenges.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="contact" class="section">
-            <div class="container">
-                <h2>Contact Us</h2>
-                <p>{content.get('contact_cta', 'Ready to get started? Contact us today!') if isinstance(content, dict) else 'Ready to get started? Contact us today!'}</p>
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <strong>Phone:</strong> {content.get('phone', 'Contact us for phone number') if isinstance(content, dict) else 'Contact us for phone number'}
-                    </div>
-                    <div class="contact-item">
-                        <strong>Email:</strong> {content.get('email', 'Contact us for email') if isinstance(content, dict) else 'Contact us for email'}
-                    </div>
-                    <div class="contact-item">
-                        <strong>Address:</strong> {content.get('address', 'Contact us for address') if isinstance(content, dict) else 'Contact us for address'}
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 {business_name}. All rights reserved. Powered by Break-even.</p>
-        </div>
-    </footer>
-</body>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{business_name}</title></head>
+<body><h1>{business_name}</h1><p>{content.get('hero_subtitle', '') if isinstance(content, dict) else ''}</p></body>
 </html>"""
+    
     
     def generate_css(self):
         """Generate CSS styles for the website"""

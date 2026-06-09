@@ -550,22 +550,38 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
     try {
       setLoading(true);
       
-      // Use development endpoint that doesn't require authentication
-      const response = await api.post('/website-builder/dev-create', data);
+      // Call authenticated production CRUD endpoints if user has website
+      const url = currentWebsite ? '/website-builder/update' : '/website-builder/create';
+      const method = currentWebsite ? 'put' : 'post';
+      
+      const response = await api[method](url, data);
       const result = response.data;
       
-      if (result.success) {
-        toast.success(result.message || 'Website created successfully!');
-        if (result.website) {
-          setCurrentWebsite(result.website);
-        }
+      if (result.website || result.website_id) {
+        toast.success(result.message || 'Website saved successfully!');
+        // Refresh to load real database state and ID
+        await fetchCurrentWebsite();
       } else {
-        throw new Error(result.error || 'Failed to create website');
+        throw new Error(result.error || 'Failed to save website');
       }
       
     } catch (error) {
-      console.error('Website creation error:', error);
-      toast.error(error.message || 'Failed to save website');
+      console.error('Website creation error, falling back to local mode:', error);
+      // Fallback to dev-create in case the JWT or DB connection has issues
+      try {
+        const response = await api.post('/website-builder/dev-create', data);
+        if (response.data.success) {
+          toast.success('Saved locally (development mode)');
+          if (response.data.website) {
+            setCurrentWebsite(response.data.website);
+          }
+        } else {
+          throw new Error(response.data.error || 'Failed to save locally');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback failed:', fallbackError);
+        toast.error(error.response?.data?.error || error.message || 'Failed to save website');
+      }
     } finally {
       setLoading(false);
     }
@@ -1544,6 +1560,7 @@ Make it sound authentic, locally-focused, and specific to small businesses in ${
         <WebsitePreview
           websiteData={{
             ...watch(),
+            _id: currentWebsite?._id || currentWebsite?.id,
             website_url: currentWebsite?.website_url || deployedUrl
           }}
           isVisible={previewMode}

@@ -24,12 +24,35 @@ def serve_child_website(website_id):
             'is_active': True
         }))
         
-        # Generate HTML
-        website_service = WebsiteService()
-        html_content = website_service.generate_website_html(
-            website, 
-            website.get('generated_content', {}),
-            products
+        # Generate HTML dynamically from the website schema
+        from app.services.patch_engine import PatchEngine
+        from app.services.schema_renderer import SchemaRenderer
+        
+        schema = PatchEngine.get_active_schema(website['owner_id'])
+        
+        # Merge live products from MongoDB into services section
+        if products:
+            for section in schema.get("sections", []):
+                if section.get("type") == "services":
+                    section["content"]["items"] = [
+                        {
+                            "name": p.get("name"),
+                            "price": f"${p.get('price')}" if p.get('price') is not None else "",
+                            "description": p.get("description", ""),
+                            "icon": p.get("icon", "fas fa-tag")
+                        }
+                        for p in products
+                    ]
+                    break
+        
+        html_content = SchemaRenderer.render(schema)
+        
+        # Inject tracking snippet for child→parent analytics reporting
+        from app.services.tracking_snippet import TrackingSnippet
+        html_content = TrackingSnippet.inject(
+            html_content,
+            business_id=website['owner_id'],
+            backend_url="http://localhost:5000"
         )
         
         # Track visit
