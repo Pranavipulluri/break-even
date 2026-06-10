@@ -39,6 +39,8 @@ SUPPORTED_EVENT_TYPES = frozenset([
     "bounce",
     "scroll_depth",
     "time_on_page",
+    "product_view",
+    "product_inquiry",
 ])
 
 

@@ -26,9 +26,10 @@ const DATE_RANGES = [
 ];
 
 const TABS = [
-  { id: 'overview',   name: 'Overview',           icon: BarChart3, gradient: 'from-blue-500 to-indigo-600'  },
-  { id: 'sentiment',  name: 'Customer Sentiment',  icon: Heart,     gradient: 'from-pink-500 to-rose-600'    },
-  { id: 'customers',  name: 'Customer Insights',   icon: Users,     gradient: 'from-green-500 to-emerald-600' },
+  { id: 'overview',   name: 'Overview',             icon: BarChart3,     gradient: 'from-blue-500 to-indigo-600'  },
+  { id: 'products',   name: 'Services & Inquiries', icon: MessageSquare, gradient: 'from-purple-500 to-pink-600' },
+  { id: 'sentiment',  name: 'Customer Sentiment',   icon: Heart,         gradient: 'from-pink-500 to-rose-600'    },
+  { id: 'customers',  name: 'Customer Insights',    icon: Users,         gradient: 'from-green-500 to-emerald-600' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,6 +120,7 @@ const Analytics = () => {
     analyticsData,
     sentimentData,
     customerData,
+    productData,
     eventSummary,
     loading,
     secondsAgo,
@@ -379,6 +381,172 @@ const Analytics = () => {
               <p className="text-sm text-gray-600">Calls to action</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SERVICES & INQUIRIES TAB
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'products' && productData && (
+        <div className="space-y-8 animate-fade-in">
+          
+          {/* Metrics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <MetricCard
+              title="Total Service Views"
+              value={(productData.totalViews ?? 0).toLocaleString()}
+              icon={Eye}
+              color="bg-purple-500"
+              gradient="from-purple-500 to-indigo-600"
+              description="Views on service cards"
+            />
+            <MetricCard
+              title="Message Inquiries"
+              value={(productData.totalInquiries ?? 0).toLocaleString()}
+              icon={MessageSquare}
+              color="bg-pink-500"
+              gradient="from-pink-500 to-rose-600"
+              description="Consultations started"
+            />
+            <MetricCard
+              title="Consultation Rate"
+              value={`${productData.totalViews > 0 ? ((productData.totalInquiries / productData.totalViews) * 100).toFixed(1) : '0.0'}%`}
+              icon={MousePointer}
+              color="bg-emerald-500"
+              gradient="from-emerald-500 to-teal-600"
+              description="Views to message inquiries conversion"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Visual breakdown chart */}
+            <div className="lg:col-span-2">
+              <ChartCard title="Service Interest Breakdown (Views vs. Inquiries)">
+                {productData.productAnalytics && productData.productAnalytics.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={productData.productAnalytics}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 40px -10px rgba(0,0,0,.1)',
+                        }}
+                      />
+                      <Bar dataKey="views" fill="#a855f7" name="Views" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="inquiries" fill="#ec4899" name="Inquiries" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <BarChart3 size={48} className="mb-2" />
+                    <span>No service/product views tracked yet.</span>
+                  </div>
+                )}
+              </ChartCard>
+            </div>
+
+            {/* Category distribution */}
+            <div>
+              <ChartCard title="Category Distribution">
+                {productData.categoryDistribution && Object.keys(productData.categoryDistribution).length > 0 ? (
+                  <div className="space-y-4 pt-4">
+                    {Object.entries(productData.categoryDistribution).map(([category, count]) => {
+                      const total = productData.totalProducts || 1;
+                      const percentage = Math.round((count / total) * 100);
+                      return (
+                        <div key={category} className="space-y-1">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-medium text-gray-700 capitalize">{category}</span>
+                            <span className="text-gray-500">{count} ({percentage}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full" 
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                    <span>No categories found.</span>
+                    <span>Create a service to see breakdown.</span>
+                  </div>
+                )}
+              </ChartCard>
+            </div>
+          </div>
+
+          {/* Detailed Performance Table */}
+          <ChartCard title="Services Performance Ledger">
+            {productData.productAnalytics && productData.productAnalytics.length > 0 ? (
+              <div className="overflow-x-auto -mx-6">
+                <table className="w-full text-left border-collapse min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/50">
+                      <th className="px-8 py-4">Service Name</th>
+                      <th className="px-6 py-4">Category</th>
+                      <th className="px-6 py-4">Price</th>
+                      <th className="px-6 py-4 text-center">Views</th>
+                      <th className="px-6 py-4 text-center">Inquiries</th>
+                      <th className="px-6 py-4 text-center">Interest Rate</th>
+                      <th className="px-8 py-4">Popularity Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {productData.productAnalytics.map((p) => {
+                      const maxScore = Math.max(...productData.productAnalytics.map(x => x.popularity_score), 1);
+                      const pct = Math.round((p.popularity_score / maxScore) * 100);
+                      const rate = p.views > 0 ? ((p.inquiries / p.views) * 100).toFixed(1) : '0.0';
+                      return (
+                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-8 py-4">
+                            <div className="font-semibold text-gray-900">{p.name}</div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 capitalize">{p.category}</td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                            {typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : p.price}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 text-center font-mono">{p.views}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600 text-center font-mono">{p.inquiries}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                              parseFloat(rate) > 20 ? 'bg-green-50 text-green-700' :
+                              parseFloat(rate) > 5 ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-600'
+                            }`}>
+                              {rate}%
+                            </span>
+                          </td>
+                          <td className="px-8 py-4">
+                            <div className="flex items-center space-x-3">
+                              <span className="text-sm font-semibold text-gray-900 font-mono w-8 text-right">{p.popularity_score}</span>
+                              <div className="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full" 
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No active services/products registered under this account.
+              </div>
+            )}
+          </ChartCard>
+
         </div>
       )}
 

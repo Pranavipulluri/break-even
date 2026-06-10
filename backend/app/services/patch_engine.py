@@ -351,10 +351,22 @@ class PatchEngine:
 
             from app.services.netlify_service import NetlifyService
             netlify = NetlifyService()
-            deploy_result = netlify.deploy_site(netlify_site_id, {"index.html": html_content})
+            deploy_result = netlify.deploy_site(netlify_site_id, {
+                "index.html": html_content,
+                "_redirects": "/*    /index.html   200",
+                "_headers": """/index.html
+  Content-Type: text/html; charset=UTF-8
+/
+  Content-Type: text/html; charset=UTF-8
+"""
+            })
 
             if deploy_result.get("success"):
-                deploy_ref = deploy_result.get("deploy_id") or deploy_result.get("id")
+                deploy_ref = (
+                    deploy_result.get("deploy", {}).get("id")
+                    or deploy_result.get("deploy_id")
+                    or deploy_result.get("id")
+                )
                 logger.info(f"🚀 Netlify re-deploy successful for business {business_id} (ref={deploy_ref})")
                 return deploy_ref
             else:

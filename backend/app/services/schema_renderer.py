@@ -209,6 +209,9 @@ class SchemaRenderer:
                 if (result.success) {{
                     showNotification("Appointment booked successfully! A confirmation email has been sent.");
                     form.reset();
+                    // Close any active booking modals
+                    const activeModals = document.querySelectorAll('[id^="booking-modal-"]');
+                    activeModals.forEach(modal => modal.classList.add('hidden'));
                 }} else {{
                     showNotification(result.error || "Booking failed. Please try again.", true);
                 }}
@@ -305,6 +308,15 @@ class SchemaRenderer:
         }}
         .animate-fade-in-up {{
             animation: fadeInUp 0.6s ease-out both;
+        }}
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {{
+            display: none;
+        }}
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {{
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }}
         '''
 
@@ -443,41 +455,162 @@ class SchemaRenderer:
                 {"name": "Comprehensive Session", "price": "$200", "description": "Full-immersion treatment package including all amenities."},
             ]
 
-        items_html = ""
-        for item in items:
-            price_tag = f'<span class="text-primary font-bold text-lg">{item.get("price", "")}</span>' if item.get("price") else ""
-            icon = item.get("icon", "fas fa-spa")
-            items_html += f'''
-            <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
-                        <i class="{icon}"></i>
+        # Generate items html based on layout variant
+        if variant == "services-list":
+            items_html = ""
+            for item in items:
+                price_tag = f'<span class="text-primary font-bold text-lg whitespace-nowrap">{item.get("price", "")}</span>' if item.get("price") else ""
+                icon = item.get("icon", "fas fa-spa")
+                p_id = item.get("id", "")
+                p_name = item.get("name", "")
+                
+                # Image rendering check
+                if item.get("image"):
+                    image_html = f'<img src="{item.get("image")}" class="h-12 w-12 rounded-xl object-cover flex-shrink-0" alt="{p_name}">'
+                else:
+                    image_html = f'''
+                        <div class="h-12 w-12 flex-shrink-0 bg-accent/20 rounded-xl flex items-center justify-center text-primary">
+                            <i class="{icon} text-lg"></i>
+                        </div>
+                    '''
+
+                items_html += f'''
+                <div class="card-hover bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
+                    <div class="flex items-start sm:items-center space-x-4">
+                        {image_html}
+                        <div>
+                            <h3 class="text-lg font-bold text-textDark">{p_name}</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed max-w-xl">{item.get("description", "")}</p>
+                        </div>
                     </div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-textDark">{item.get("name")}</h3>
+                    <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-4 sm:pt-0 mt-4 sm:mt-0">
                         {price_tag}
+                        <a href="#contact" class="premium-btn px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                            Consult Now
+                        </a>
                     </div>
-                    <p class="text-gray-600 text-sm leading-relaxed mb-6">{item.get("description", "")}</p>
                 </div>
-                <a href="#booking" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition">
-                    Book Now <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
+                '''
+            
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gray-50/50">
+                <div class="max-w-4xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    <div class="space-y-4">
+                        {items_html}
+                    </div>
+                </div>
+            </section>
             '''
 
-        return f'''
-        <section id="services" class="py-20 bg-gray-50/50">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="text-center space-y-4 mb-16">
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
-                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+        elif variant == "services-carousel":
+            items_html = ""
+            for item in items:
+                price_tag = f'<span class="text-primary font-bold text-lg">{item.get("price", "")}</span>' if item.get("price") else ""
+                icon = item.get("icon", "fas fa-spa")
+                p_id = item.get("id", "")
+                p_name = item.get("name", "")
+                
+                # Image rendering check
+                if item.get("image"):
+                    image_html = f'<img src="{item.get("image")}" class="h-12 w-12 rounded-xl object-cover mb-4" alt="{p_name}">'
+                else:
+                    image_html = f'''
+                        <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
+                            <i class="{icon}"></i>
+                        </div>
+                    '''
+
+                items_html += f'''
+                <div class="snap-start flex-shrink-0 w-[290px] sm:w-[350px] bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
+                    <div>
+                        {image_html}
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-textDark truncate">{p_name}</h3>
+                            {price_tag}
+                        </div>
+                        <p class="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">{item.get("description", "")}</p>
+                    </div>
+                    <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                        Consult Now <i class="fas fa-arrow-right text-xs"></i>
+                    </a>
                 </div>
-                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {items_html}
+                '''
+            
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gray-50/50 overflow-hidden">
+                <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-12">
+                    <div class="space-y-4">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"></div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="document.getElementById('services-track-{sec_id}').scrollBy({{left: -380, behavior: 'smooth'}})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Scroll left">
+                            <i class="fas fa-chevron-left text-sm"></i>
+                        </button>
+                        <button onclick="document.getElementById('services-track-{sec_id}').scrollBy({{left: 380, behavior: 'smooth'}})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Scroll right">
+                            <i class="fas fa-chevron-right text-sm"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </section>
-        '''
+                <div class="max-w-7xl mx-auto px-6 relative">
+                    <div id="services-track-{sec_id}" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar gap-8 pb-6">
+                        {items_html}
+                    </div>
+                </div>
+            </section>
+            '''
+
+        else: # services-grid fallback
+            items_html = ""
+            for item in items:
+                price_tag = f'<span class="text-primary font-bold text-lg">{item.get("price", "")}</span>' if item.get("price") else ""
+                icon = item.get("icon", "fas fa-spa")
+                p_id = item.get("id", "")
+                p_name = item.get("name", "")
+                
+                # Image rendering check
+                if item.get("image"):
+                    image_html = f'<img src="{item.get("image")}" class="h-12 w-12 rounded-xl object-cover mb-4" alt="{p_name}">'
+                else:
+                    image_html = f'''
+                        <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
+                            <i class="{icon}"></i>
+                        </div>
+                    '''
+
+                items_html += f'''
+                <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
+                    <div>
+                        {image_html}
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-textDark">{p_name}</h3>
+                            {price_tag}
+                        </div>
+                        <p class="text-gray-600 text-sm leading-relaxed mb-6">{item.get("description", "")}</p>
+                    </div>
+                    <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                        Consult Now <i class="fas fa-arrow-right text-xs"></i>
+                    </a>
+                </div>
+                '''
+
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gray-50/50">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {items_html}
+                    </div>
+                </div>
+            </section>
+            '''
 
     # ================================================================
     # TESTIMONIALS Section
@@ -494,34 +627,77 @@ class SchemaRenderer:
                 {"name": "Marcus Aurelius", "role": "Strategic Advisor", "quote": "I appreciate the continuous refinement and premium care standard."},
             ]
 
-        items_html = ""
-        for item in items:
-            items_html += f'''
-            <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm space-y-6">
-                <div class="flex space-x-1 text-amber-400">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                </div>
-                <p class="text-gray-600 italic leading-relaxed">"{item.get("quote")}"</p>
-                <div class="flex items-center space-x-4 pt-4 border-t border-gray-50">
+        if variant == "testimonials-carousel":
+            items_html = ""
+            for item in items:
+                items_html += f'''
+                <div class="snap-center flex-shrink-0 w-full bg-white rounded-2xl p-8 md:p-12 border border-gray-100 shadow-md space-y-6 flex flex-col items-center text-center">
+                    <div class="flex space-x-1 text-amber-400">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="text-gray-600 text-lg md:text-xl italic leading-relaxed max-w-xl">"{item.get("quote")}"</p>
+                    <div class="pt-4 border-t border-gray-100 w-24"></div>
                     <div>
-                        <h4 class="font-bold text-textDark">{item.get("name")}</h4>
-                        <span class="text-xs text-gray-500">{item.get("role", "")}</span>
+                        <h4 class="font-bold text-textDark text-lg">{item.get("name")}</h4>
+                        <span class="text-sm text-gray-500">{item.get("role", "")}</span>
                     </div>
                 </div>
-            </div>
+                '''
+
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-white/50 overflow-hidden">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    
+                    <div class="max-w-3xl mx-auto px-6 relative">
+                        <div id="testimonials-track-{sec_id}" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar gap-8 pb-6">
+                            {items_html}
+                        </div>
+                        <div class="flex justify-center space-x-4 mt-6">
+                            <button onclick="document.getElementById('testimonials-track-{sec_id}').scrollBy({{left: -600, behavior: 'smooth'}})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Previous quote">
+                                <i class="fas fa-chevron-left text-sm"></i>
+                            </button>
+                            <button onclick="document.getElementById('testimonials-track-{sec_id}').scrollBy({{left: 600, behavior: 'smooth'}})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Next quote">
+                                <i class="fas fa-chevron-right text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
             '''
 
-        return f'''
-        <section id="testimonials" class="py-20 max-w-7xl mx-auto px-6">
-            <div class="text-center space-y-4 mb-16">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
-                <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-            </div>
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {items_html}
-            </div>
-        </section>
-        '''
+        else: # testimonials-grid
+            items_html = ""
+            for item in items:
+                items_html += f'''
+                <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm space-y-6">
+                    <div class="flex space-x-1 text-amber-400">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="text-gray-600 italic leading-relaxed">"{item.get("quote")}"</p>
+                    <div class="flex items-center space-x-4 pt-4 border-t border-gray-50">
+                        <div>
+                            <h4 class="font-bold text-textDark">{item.get("name")}</h4>
+                            <span class="text-xs text-gray-500">{item.get("role", "")}</span>
+                        </div>
+                    </div>
+                </div>
+                '''
+
+            return f'''
+            <section id="{sec_id}" class="py-20 max-w-7xl mx-auto px-6">
+                <div class="text-center space-y-4 mb-16">
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    {items_html}
+                </div>
+            </section>
+            '''
 
     # ================================================================
     # TEAM Section
@@ -538,32 +714,63 @@ class SchemaRenderer:
                 {"name": "David Miller", "role": "Creative Specialist", "bio": "Passionately tailoring unique portfolios.", "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"},
             ]
 
-        members_html = ""
-        for item in members:
-            members_html += f'''
-            <div class="card-hover bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                <img src="{item.get("photo")}" alt="{item.get("name")}" class="w-full h-72 object-cover" loading="lazy">
-                <div class="p-8 space-y-3">
-                    <h3 class="text-xl font-bold text-textDark">{item.get("name")}</h3>
-                    <p class="text-primary font-semibold text-sm">{item.get("role")}</p>
-                    <p class="text-gray-600 text-sm leading-relaxed">{item.get("bio", "")}</p>
+        if variant == "team-list":
+            members_html = ""
+            for item in members:
+                members_html += f'''
+                <div class="card-hover bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm flex flex-col md:flex-row items-center">
+                    <img src="{item.get("photo")}" alt="{item.get("name")}" class="w-full md:w-48 h-64 md:h-48 object-cover flex-shrink-0" loading="lazy">
+                    <div class="p-8 space-y-3 flex-grow w-full">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <h3 class="text-xl font-bold text-textDark">{item.get("name")}</h3>
+                            <span class="text-primary font-semibold text-xs bg-accent/20 px-3 py-1 rounded-full w-fit">{item.get("role")}</span>
+                        </div>
+                        <p class="text-gray-600 text-sm leading-relaxed">{item.get("bio", "")}</p>
+                    </div>
                 </div>
-            </div>
+                '''
+
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gray-50/50">
+                <div class="max-w-4xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    <div class="space-y-6">
+                        {members_html}
+                    </div>
+                </div>
+            </section>
             '''
 
-        return f'''
-        <section id="team" class="py-20 bg-gray-50/50">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="text-center space-y-4 mb-16">
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
-                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+        else: # team-cards fallback
+            members_html = ""
+            for item in members:
+                members_html += f'''
+                <div class="card-hover bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                    <img src="{item.get("photo")}" alt="{item.get("name")}" class="w-full h-72 object-cover" loading="lazy">
+                    <div class="p-8 space-y-3">
+                        <h3 class="text-xl font-bold text-textDark">{item.get("name")}</h3>
+                        <p class="text-primary font-semibold text-sm">{item.get("role")}</p>
+                        <p class="text-gray-600 text-sm leading-relaxed">{item.get("bio", "")}</p>
+                    </div>
                 </div>
-                <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-                    {members_html}
+                '''
+
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gray-50/50">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                        {members_html}
+                    </div>
                 </div>
-            </div>
-        </section>
-        '''
+            </section>
+            '''
 
     # ================================================================
     # BOOKING Section
@@ -579,61 +786,132 @@ class SchemaRenderer:
         for s in services_list:
             services_options += f'<option value="{s}">{s}</option>'
 
-        return f'''
-        <section id="booking" class="py-20 max-w-7xl mx-auto px-6">
-            <div class="text-center space-y-4 mb-16">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
-                <p class="text-gray-600 text-sm max-w-md mx-auto">Select your preferred date, time, and service package below.</p>
-                <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-            </div>
-
-            <div class="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-2xl mx-auto overflow-hidden">
-                <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
-                    <h3 class="text-2xl font-bold">Reservation Desk</h3>
-                    <p class="text-white/80 text-sm">Please fill in your details to secure your priority booking slot.</p>
+        if variant == "booking-modal":
+            return f'''
+            <section id="{sec_id}" class="py-20 bg-gradient-to-r from-primary/10 via-secondary/5 to-accent/15">
+                <div class="max-w-4xl mx-auto px-6 text-center space-y-8">
+                    <h2 class="text-3xl sm:text-5xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                    <p class="text-gray-600 text-lg max-w-xl mx-auto">
+                        Experience premium services tailored just for you. Select your preferred date, time, and package in our secure booking desk.
+                    </p>
+                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    <div class="pt-4">
+                        <button onclick="document.getElementById('booking-modal-{sec_id}').classList.remove('hidden')" class="premium-btn px-10 py-5 rounded-full text-lg font-bold shadow-xl">
+                            <i class="fas fa-calendar-alt mr-2"></i> Book Appointment Now
+                        </button>
+                    </div>
                 </div>
-                <form onsubmit="submitBooking(event, '{business_id}')" class="p-8 space-y-6">
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Full Name</label>
-                            <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+
+                <!-- Modal Container -->
+                <div id="booking-modal-{sec_id}" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300" onclick="if(event.target === this) this.classList.add('hidden')">
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-2xl max-w-2xl w-full overflow-hidden relative animate-fade-in-up">
+                        <button onclick="document.getElementById('booking-modal-{sec_id}').classList.add('hidden')" class="absolute top-4 right-4 text-white hover:text-gray-200 transition bg-black/20 hover:bg-black/40 h-8 w-8 rounded-full flex items-center justify-center z-10" aria-label="Close booking modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
+                            <h3 class="text-2xl font-bold">Reservation Desk</h3>
+                            <p class="text-white/80 text-sm">Please fill in your details to secure your priority booking slot.</p>
                         </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Email Address</label>
-                            <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
+                        <form onsubmit="submitBooking(event, '{business_id}')" class="p-8 space-y-6">
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Full Name</label>
+                                    <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Email Address</label>
+                                    <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Phone Number</label>
+                                    <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Service Package</label>
+                                    <select name="service" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm bg-white transition">
+                                        {services_options}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Appointment Date</label>
+                                    <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-sm font-semibold text-textDark">Preferred Time</label>
+                                    <input type="time" name="time" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Additional Requests</label>
+                                <textarea name="notes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition" placeholder="Any special needs or inquiries..."></textarea>
+                            </div>
+                            <button type="submit" class="premium-btn w-full py-4 rounded-xl text-base font-bold shadow-lg mt-4">Confirm Appointment Slot</button>
+                        </form>
                     </div>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Phone Number</label>
-                            <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Service Package</label>
-                            <select name="service" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm bg-white transition">
-                                {services_options}
-                            </select>
-                        </div>
+                </div>
+            </section>
+            '''
+
+        else: # booking-embedded fallback
+            return f'''
+            <section id="{sec_id}" class="py-20 max-w-7xl mx-auto px-6">
+                <div class="text-center space-y-4 mb-16">
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">{title}</h2>
+                    <p class="text-gray-600 text-sm max-w-md mx-auto">Select your preferred date, time, and service package below.</p>
+                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-2xl mx-auto overflow-hidden">
+                    <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
+                        <h3 class="text-2xl font-bold">Reservation Desk</h3>
+                        <p class="text-white/80 text-sm">Please fill in your details to secure your priority booking slot.</p>
                     </div>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Appointment Date</label>
-                            <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                    <form onsubmit="submitBooking(event, '{business_id}')" class="p-8 space-y-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Full Name</label>
+                                <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Email Address</label>
+                                <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Phone Number</label>
+                                <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Service Package</label>
+                                <select name="service" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm bg-white transition">
+                                    {services_options}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Appointment Date</label>
+                                <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Preferred Time</label>
+                                <input type="time" name="time" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Preferred Time</label>
-                            <input type="time" name="time" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            <label class="text-sm font-semibold text-textDark">Additional Requests</label>
+                            <textarea name="notes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition" placeholder="Any special needs or inquiries..."></textarea>
                         </div>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-sm font-semibold text-textDark">Additional Requests</label>
-                        <textarea name="notes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition" placeholder="Any special needs or inquiries..."></textarea>
-                    </div>
-                    <button type="submit" class="premium-btn w-full py-4 rounded-xl text-base font-bold shadow-lg mt-4">Confirm Appointment Slot</button>
-                </form>
-            </div>
-        </section>
-        '''
+                        <button type="submit" class="premium-btn w-full py-4 rounded-xl text-base font-bold shadow-lg mt-4">Confirm Appointment Slot</button>
+                    </form>
+                </div>
+            </section>
+            '''
 
     # ================================================================
     # CONTACT Section
