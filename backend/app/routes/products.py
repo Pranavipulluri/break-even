@@ -83,10 +83,22 @@ def update_product(product_id):
         if not product:
             return jsonify({'error': 'Product not found'}), 404
         # Update product
-        update_data = {
-            **data,
-            'updated_at': datetime.utcnow()
-        }
+        # Strip immutable / query fields to prevent mongo write errors
+        update_data = {k: v for k, v in data.items() if k not in ['_id', 'user_id']}
+        
+        # Cast types if present
+        if 'price' in update_data:
+            try:
+                update_data['price'] = float(update_data['price'])
+            except (ValueError, TypeError):
+                pass
+        if 'stock' in update_data:
+            try:
+                update_data['stock'] = int(update_data['stock'])
+            except (ValueError, TypeError):
+                pass
+                
+        update_data['updated_at'] = datetime.utcnow()
         
         mongo.db.products.update_one(
             {'_id': ObjectId(product_id)},

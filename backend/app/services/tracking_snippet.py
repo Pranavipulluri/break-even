@@ -25,7 +25,7 @@ class TrackingSnippet:
     """Generates and injects the child→parent analytics tracking script."""
 
     @staticmethod
-    def generate(business_id, api_key=None, backend_url=None):
+    def generate(business_id, api_key=None, backend_url=None, website_id=None):
         """
         Returns a <script> tag string for embedding in child websites.
 
@@ -35,6 +35,7 @@ class TrackingSnippet:
             backend_url: The main backend URL. Defaults to production-friendly
                         relative path (the child site's own Netlify function or
                         the main backend).
+            website_id:  The child website's MongoDB ID.
         """
         # Default to the production backend — override via env in deployment
         if not backend_url:
@@ -44,11 +45,14 @@ class TrackingSnippet:
         if api_key:
             api_key_header = f'"X-BE-Key": "{api_key}",'
 
+        web_id_str = str(website_id) if website_id else ""
+
         return f'''<!-- Break-Even Analytics Tracker -->
 <script>
 (function() {{
   "use strict";
   var BID = "{business_id}";
+  var WID = "{web_id_str}";
   var API = "{backend_url}/api/events/ingest";
   var HEADERS = {{
     "Content-Type": "application/json",
@@ -77,12 +81,75 @@ class TrackingSnippet:
     }}
   }}
 
+  function trackProductInteraction(productId, type) {{
+    if (!productId || !WID) return;
+    try {{
+      var body = JSON.stringify({{
+        product_id: productId,
+        type: type
+      }});
+      fetch("{backend_url}/api/site/" + WID + "/track-interaction", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: body
+      }});
+    }} catch (e) {{
+      /* silent fail */
+    }}
+  }}
+
   /* Page View */
   if (document.readyState === "loading") {{
     document.addEventListener("DOMContentLoaded", function() {{ send("page_view"); }});
   }} else {{
     send("page_view");
   }}
+
+  /* Product View Tracking on load */
+  function trackLoadedProducts() {{
+    try {{
+      var prodElements = document.querySelectorAll("[data-track-product-view]");
+      prodElements.forEach(function(el) {{
+        var pId = el.getAttribute("data-product-id");
+        if (pId) {{
+          trackProductInteraction(pId, "view");
+        }}
+      }});
+    }} catch (err) {{}}
+  }}
+
+  if (document.readyState === "loading") {{
+    document.addEventListener("DOMContentLoaded", trackLoadedProducts);
+  }} else {{
+    trackLoadedProducts();
+  }}
+
+  /* Product Inquiry tracking and Form Autofill */
+  document.addEventListener("click", function(e) {{
+    try {{
+      var el = e.target.closest("[data-track-product-inquiry]");
+      if (!el) return;
+      var pId = el.getAttribute("data-product-id");
+      var pName = el.getAttribute("data-product-name");
+      
+      if (pId) {{
+        trackProductInteraction(pId, "inquiry");
+      }}
+      
+      // Autofill contact/message form if exists
+      var contactForm = document.querySelector("#contact form, form[onsubmit*='submitContact']");
+      if (contactForm) {{
+        var subjectInput = contactForm.querySelector("[name=subject]");
+        var messageInput = contactForm.querySelector("[name=message]");
+        if (subjectInput) {{
+          subjectInput.value = "Consultation: " + pName;
+        }}
+        if (messageInput) {{
+          messageInput.value = "I would like to consult and book for: " + pName + ". Please get back to me.";
+        }}
+      }}
+    }} catch (err) {{}}
+  }}, true);
 
   /* CTA / Booking Clicks — delegate from document */
   document.addEventListener("click", function(e) {{
@@ -138,7 +205,7 @@ class TrackingSnippet:
 </script>'''
 
     @staticmethod
-    def inject(html_content, business_id, api_key=None, backend_url=None):
+    def inject(html_content, business_id, api_key=None, backend_url=None, website_id=None):
         """
         Injects the tracking script before </body> in existing HTML.
 
@@ -147,6 +214,7 @@ class TrackingSnippet:
             business_id:  Business owner's ID.
             api_key:      Optional API key.
             backend_url:  Override backend URL.
+            website_id:   The child website's MongoDB ID.
 
         Returns:
             HTML string with tracking script injected.
@@ -154,10 +222,24 @@ class TrackingSnippet:
         if not html_content or not business_id:
             return html_content
 
+        # Look up website_id in the database if not explicitly passed
+        if not website_id and business_id:
+            try:
+                from app import mongo
+                site = mongo.db.child_websites.find_one({"owner_id": str(business_id)}, {"_id": 1})
+                if not site:
+                    from bson import ObjectId
+                    site = mongo.db.child_websites.find_one({"owner_id": ObjectId(business_id)}, {"_id": 1})
+                if site:
+                    website_id = str(site["_id"])
+            except Exception:
+                pass
+
         snippet = TrackingSnippet.generate(
             business_id=business_id,
             api_key=api_key,
             backend_url=backend_url,
+            website_id=website_id,
         )
 
         # Inject before </body> if it exists

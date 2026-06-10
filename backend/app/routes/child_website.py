@@ -36,10 +36,12 @@ def serve_child_website(website_id):
                 if section.get("type") == "services":
                     section["content"]["items"] = [
                         {
+                            "id": str(p.get("_id")),
                             "name": p.get("name"),
                             "price": f"${p.get('price')}" if p.get('price') is not None else "",
                             "description": p.get("description", ""),
-                            "icon": p.get("icon", "fas fa-tag")
+                            "icon": p.get("icon", "fas fa-tag"),
+                            "image": p.get("image", "")
                         }
                         for p in products
                     ]
@@ -52,7 +54,8 @@ def serve_child_website(website_id):
         html_content = TrackingSnippet.inject(
             html_content,
             business_id=website['owner_id'],
-            backend_url="http://localhost:5000"
+            backend_url="http://localhost:5000",
+            website_id=str(website['_id'])
         )
         
         # Track visit

@@ -103,6 +103,7 @@ export function useAnalyticsRange(range, businessId) {
   const [analyticsData, setAnalyticsData]   = useState(null);
   const [sentimentData, setSentimentData]   = useState(null);
   const [customerData, setCustomerData]     = useState(null);
+  const [productData, setProductData]       = useState(null);
   const [eventSummary, setEventSummary]     = useState(null);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState(null);
@@ -123,6 +124,7 @@ export function useAnalyticsRange(range, businessId) {
         api.get(`/analytics/overview?range=${range}`),
         api.get('/analytics/sentiment'),
         api.get('/analytics/customers'),
+        api.get('/analytics/products'),
       ];
 
       if (businessId) {
@@ -138,8 +140,9 @@ export function useAnalyticsRange(range, businessId) {
       if (results[0]?.data) setAnalyticsData(results[0].data);
       if (results[1]?.data) setSentimentData(results[1].data);
       if (results[2]?.data) setCustomerData(results[2].data);
+      if (results[3]?.data) setProductData(results[3].data);
 
-      const evtData = results[3]?.data;
+      const evtData = results[4]?.data;
       if (evtData?.success) setEventSummary(evtData.summary);
 
       const now = new Date();
@@ -174,6 +177,7 @@ export function useAnalyticsRange(range, businessId) {
     analyticsData,
     sentimentData,
     customerData,
+    productData,
     eventSummary,
     loading,
     error,

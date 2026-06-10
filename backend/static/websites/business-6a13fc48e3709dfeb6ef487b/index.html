@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aura Spa Serenity Center</title>
-    <meta name="description" content="Indulge in premium wellness, facials, and therapeutic massage treatments tailored for elegance.">
-    <meta name="keywords" content="spa, wellness, massage, facial, booking, beauty">
-    <meta name="generator" content="Break-Even AI Business OS v1">
+    <title>UrbanMart</title>
+    <meta name="description" content="Your one-stop destination for everyday essentials, household products, groceries, personal care items, and more. We provide quality products at affordable prices, ensuring a convenient and enjoyable shopping experience for every customer.">
+    <meta name="keywords" content="retail, UrbanMart, kukatpally, booking, services">
+    <meta name="generator" content="Break-Even AI Business OS v15">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
@@ -19,11 +19,11 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#8fa89b',
-                        secondary: '#2c3b35',
-                        accent: '#d0dfd8',
-                        bgLight: '#f4f7f6',
-                        textDark: '#1d2622'
+                        primary: '#b76e79',
+                        secondary: '#3d3234',
+                        accent: '#e4b4b8',
+                        bgLight: '#faf3f3',
+                        textDark: '#2d2426'
                     }
                 }
             }
@@ -32,13 +32,13 @@
     <style>
         
         :root {
-            --primary: #8fa89b;
-            --secondary: #2c3b35;
-            --accent: #d0dfd8;
-            --bg-light: #f4f7f6;
-            --text-dark: #1d2622;
+            --primary: #b76e79;
+            --secondary: #3d3234;
+            --accent: #e4b4b8;
+            --bg-light: #faf3f3;
+            --text-dark: #2d2426;
             --text-light: #ffffff;
-            --gradient: linear-gradient(135deg, #8fa89b 0%, #d0dfd8 100%);
+            --gradient: linear-gradient(135deg, #b76e79 0%, #e4b4b8 100%);
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -70,6 +70,15 @@
         .animate-fade-in-up {
             animation: fadeInUp 0.6s ease-out both;
         }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
         
     </style>
 </head>
@@ -78,10 +87,10 @@
         <nav class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 z-40">
             <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 <a href="#" class="flex items-center space-x-3">
-                    <span class="text-2xl font-bold tracking-tight text-textDark bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Aura Spa Serenity Center</span>
+                    <span class="text-2xl font-bold tracking-tight text-textDark bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">UrbanMart</span>
                 </a>
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="#services" class="text-sm font-semibold hover:text-primary transition">Services</a><a href="#testimonials" class="text-sm font-semibold hover:text-primary transition">Testimonials</a><a href="#team" class="text-sm font-semibold hover:text-primary transition">Team</a><a href="#booking" class="text-sm font-semibold hover:text-primary transition">Booking</a><a href="#contact" class="text-sm font-semibold hover:text-primary transition">Contact</a>
+                    <a href="#services" class="text-sm font-semibold hover:text-primary transition">Services</a><a href="#testimonials" class="text-sm font-semibold hover:text-primary transition">Testimonials</a><a href="#booking" class="text-sm font-semibold hover:text-primary transition">Booking</a><a href="#contact" class="text-sm font-semibold hover:text-primary transition">Contact</a>
                     <a href="#booking" class="premium-btn px-6 py-3 rounded-full text-sm font-semibold">Book Online</a>
                 </div>
                 <button id="mobile-menu-btn" class="md:hidden text-textDark" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
@@ -89,7 +98,7 @@
                 </button>
             </div>
             <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-md border-t border-gray-100 px-6 py-4 space-y-3">
-                <a href="#services" class="block text-sm font-semibold hover:text-primary transition">Services</a><a href="#testimonials" class="block text-sm font-semibold hover:text-primary transition">Testimonials</a><a href="#team" class="block text-sm font-semibold hover:text-primary transition">Team</a><a href="#booking" class="block text-sm font-semibold hover:text-primary transition">Booking</a><a href="#contact" class="block text-sm font-semibold hover:text-primary transition">Contact</a>
+                <a href="#services" class="block text-sm font-semibold hover:text-primary transition">Services</a><a href="#testimonials" class="block text-sm font-semibold hover:text-primary transition">Testimonials</a><a href="#booking" class="block text-sm font-semibold hover:text-primary transition">Booking</a><a href="#contact" class="block text-sm font-semibold hover:text-primary transition">Contact</a>
                 <a href="#booking" class="premium-btn block text-center px-6 py-3 rounded-full text-sm font-semibold mt-2">Book Online</a>
             </div>
         </nav>
@@ -99,203 +108,150 @@
         
             <section id="hero_1" class="py-20 lg:py-32 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center animate-fade-in-up">
                 <div class="space-y-8">
-                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-textDark tracking-tight leading-tight">Elevate Your Inner & Outer Well-Being</h1>
-                    <p class="text-lg text-gray-600 leading-relaxed max-w-xl">Discover luxury therapeutic treatments designed to restore balance, calm, and vital energy.</p>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-textDark tracking-tight leading-tight">Scale Your Business with Data-Driven Solutions</h1>
+                    <p class="text-lg text-gray-600 leading-relaxed max-w-xl">Professional retail services in kukatpally</p>
                     <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                        <a href="#booking" class="premium-btn text-center px-8 py-4 rounded-full text-base font-bold">Schedule Priority Appointment</a>
+                        <a href="#booking" class="premium-btn text-center px-8 py-4 rounded-full text-base font-bold">Get Started Free</a>
                         <a href="#services" class="border border-gray-300 text-center text-textDark hover:bg-gray-50 transition px-8 py-4 rounded-full text-base font-bold">Our Services</a>
                     </div>
                 </div>
                 <div class="relative">
                     <div class="absolute inset-0 bg-accent/20 rounded-3xl blur-2xl transform rotate-6 scale-95"></div>
-                    <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Hero Image" class="relative rounded-3xl shadow-2xl object-cover w-full h-[500px]" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80" alt="Hero Image" class="relative rounded-3xl shadow-2xl object-cover w-full h-[500px]" loading="lazy">
                 </div>
             </section>
             
-        <section id="services" class="py-20 bg-gray-50/50">
-            <div class="max-w-7xl mx-auto px-6">
-                <div class="text-center space-y-4 mb-16">
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Bespoke Wellness Therapies</h2>
-                    <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+            <section id="services_1" class="py-20 bg-gray-50/50">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Our Services</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        
+                <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-textDark">Groceries and Daily Essentials Fresh Fruits and Vegetables Household and Cleaning Supplies Personal Care and Hygiene Products Snacks and Beverages Stationery and Office Supplies Kitchen and Home Essentials Electronics and Accessories Online Ordering and Home Delivery Seasonal Offers and Discounts</h3>
+                            
+                        </div>
+                        <p class="text-gray-600 text-sm leading-relaxed mb-6"></p>
+                    </div>
+                    <a href="#booking" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition">
+                        Book Now <i class="fas fa-arrow-right text-xs"></i>
+                    </a>
                 </div>
-                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    
-            <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
-                        <i class="fas fa-hands"></i>
-                    </div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-textDark">Deep Tissue Release</h3>
-                        <span class="text-primary font-bold text-lg">$120</span>
-                    </div>
-                    <p class="text-gray-600 text-sm leading-relaxed mb-6">Focused trigger point strokes and muscle alignment designed for complete decompression.</p>
-                </div>
-                <a href="#booking" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition">
-                    Book Now <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
-            
-            <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
-                        <i class="fas fa-spa"></i>
-                    </div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-textDark">Rejuvenating Facial</h3>
-                        <span class="text-primary font-bold text-lg">$95</span>
-                    </div>
-                    <p class="text-gray-600 text-sm leading-relaxed mb-6">Custom enzyme treatments and collagen therapy to restore facial vitality and skin clarity.</p>
-                </div>
-                <a href="#booking" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition">
-                    Book Now <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
-            
-            <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="h-12 w-12 bg-accent/20 rounded-xl flex items-center justify-center text-primary mb-4">
-                        <i class="fas fa-gem"></i>
-                    </div>
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-xl font-bold text-textDark">Signature Spa Ritual</h3>
-                        <span class="text-primary font-bold text-lg">$210</span>
-                    </div>
-                    <p class="text-gray-600 text-sm leading-relaxed mb-6">Full-body luxury hot stone therapy and botanical exfoliation including head massage.</p>
-                </div>
-                <a href="#booking" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition">
-                    Book Now <i class="fas fa-arrow-right text-xs"></i>
-                </a>
-            </div>
-            
-                </div>
-            </div>
-        </section>
-        
-        <section id="testimonials" class="py-20 max-w-7xl mx-auto px-6">
-            <div class="text-center space-y-4 mb-16">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Reflections of Serenity</h2>
-                <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-            </div>
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 
-            <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm space-y-6">
-                <div class="flex space-x-1 text-amber-400">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                </div>
-                <p class="text-gray-600 italic leading-relaxed">"The absolute highlight of my week. The deep tissue ritual is simply restorative!"</p>
-                <div class="flex items-center space-x-4 pt-4 border-t border-gray-50">
-                    <div>
-                        <h4 class="font-bold text-textDark">Clara Higgins</h4>
-                        <span class="text-xs text-gray-500">VIP Client</span>
                     </div>
                 </div>
-            </div>
+            </section>
             
-            <div class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm space-y-6">
-                <div class="flex space-x-1 text-amber-400">
-                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                </div>
-                <p class="text-gray-600 italic leading-relaxed">"Stunning aesthetics, highly professional staff, and impeccable attention to wellness details."</p>
-                <div class="flex items-center space-x-4 pt-4 border-t border-gray-50">
-                    <div>
-                        <h4 class="font-bold text-textDark">John Harrison</h4>
-                        <span class="text-xs text-gray-500">Premium Member</span>
+            <section id="cta_1" class="py-20">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="bg-gradient-to-r from-primary to-secondary rounded-3xl p-12 lg:p-16 text-center text-white shadow-2xl">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">Why Choose Us</h2>
+                        <p class="text-white/80 text-lg max-w-xl mx-auto mb-8">We combine quality | affordability | and convenience in one place. With a carefully selected product range | fast delivery options</p>
+                        <a href="#booking" class="inline-block bg-white text-primary px-10 py-4 rounded-full font-bold text-base hover:bg-gray-100 transition shadow-lg">call now for any queries</a>
                     </div>
                 </div>
-            </div>
+            </section>
             
-            </div>
-        </section>
-        
-        <section id="team" class="py-20 bg-gray-50/50">
-            <div class="max-w-7xl mx-auto px-6">
+            <section id="testimonials_1" class="py-20 bg-white/50 overflow-hidden">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center space-y-4 mb-16">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">What Our Clients Say</h2>
+                        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    
+                    <div class="max-w-3xl mx-auto px-6 relative">
+                        <div id="testimonials-track-testimonials_1" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar gap-8 pb-6">
+                            
+                <div class="snap-center flex-shrink-0 w-full bg-white rounded-2xl p-8 md:p-12 border border-gray-100 shadow-md space-y-6 flex flex-col items-center text-center">
+                    <div class="flex space-x-1 text-amber-400">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="text-gray-600 text-lg md:text-xl italic leading-relaxed max-w-xl">"Excellent service and outstanding quality. Highly recommended!"</p>
+                    <div class="pt-4 border-t border-gray-100 w-24"></div>
+                    <div>
+                        <h4 class="font-bold text-textDark text-lg">Happy Customer</h4>
+                        <span class="text-sm text-gray-500">Client</span>
+                    </div>
+                </div>
+                
+                        </div>
+                        <div class="flex justify-center space-x-4 mt-6">
+                            <button onclick="document.getElementById('testimonials-track-testimonials_1').scrollBy({left: -600, behavior: 'smooth'})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Previous quote">
+                                <i class="fas fa-chevron-left text-sm"></i>
+                            </button>
+                            <button onclick="document.getElementById('testimonials-track-testimonials_1').scrollBy({left: 600, behavior: 'smooth'})" class="h-10 w-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-textDark hover:bg-primary hover:text-white transition duration-200 shadow-sm" aria-label="Next quote">
+                                <i class="fas fa-chevron-right text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="booking_1" class="py-20 max-w-7xl mx-auto px-6">
                 <div class="text-center space-y-4 mb-16">
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Master Practitioners</h2>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Book an Appointment</h2>
+                    <p class="text-gray-600 text-sm max-w-md mx-auto">Select your preferred date, time, and service package below.</p>
                     <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
                 </div>
-                <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-                    
-            <div class="card-hover bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Sophia Lauren" class="w-full h-72 object-cover" loading="lazy">
-                <div class="p-8 space-y-3">
-                    <h3 class="text-xl font-bold text-textDark">Sophia Lauren</h3>
-                    <p class="text-primary font-semibold text-sm">Bespoke Facial Specialist</p>
-                    <p class="text-gray-600 text-sm leading-relaxed">Over 12 years of hands-on expertise delivering custom enzyme skin vitalization.</p>
-                </div>
-            </div>
-            
-            <div class="card-hover bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Julian Hayes" class="w-full h-72 object-cover" loading="lazy">
-                <div class="p-8 space-y-3">
-                    <h3 class="text-xl font-bold text-textDark">Julian Hayes</h3>
-                    <p class="text-primary font-semibold text-sm">Lead Massage Therapist</p>
-                    <p class="text-gray-600 text-sm leading-relaxed">Specialized in structural integration, aromatherapy, and hot-stone muscle release.</p>
-                </div>
-            </div>
-            
-                </div>
-            </div>
-        </section>
-        
-        <section id="booking" class="py-20 max-w-7xl mx-auto px-6">
-            <div class="text-center space-y-4 mb-16">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Schedule Serenity</h2>
-                <p class="text-gray-600 text-sm max-w-md mx-auto">Select your preferred date, time, and service package below.</p>
-                <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-            </div>
 
-            <div class="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-2xl mx-auto overflow-hidden">
-                <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
-                    <h3 class="text-2xl font-bold">Reservation Desk</h3>
-                    <p class="text-white/80 text-sm">Please fill in your details to secure your priority booking slot.</p>
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-xl max-w-2xl mx-auto overflow-hidden">
+                    <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white">
+                        <h3 class="text-2xl font-bold">Reservation Desk</h3>
+                        <p class="text-white/80 text-sm">Please fill in your details to secure your priority booking slot.</p>
+                    </div>
+                    <form onsubmit="submitBooking(event, '6a13fc48e3709dfeb6ef487b')" class="p-8 space-y-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Full Name</label>
+                                <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Email Address</label>
+                                <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Phone Number</label>
+                                <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Service Package</label>
+                                <select name="service" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm bg-white transition">
+                                    <option value="Groceries and Daily Essentials Fresh Fruits and Vegetables Household and Cleaning Supplies Personal Care and Hygiene Products Snacks and Beverages Stationery and Office Supplies Kitchen and Home Essentials Electronics and Accessories Online Ordering and Home Delivery Seasonal Offers and Discounts">Groceries and Daily Essentials Fresh Fruits and Vegetables Household and Cleaning Supplies Personal Care and Hygiene Products Snacks and Beverages Stationery and Office Supplies Kitchen and Home Essentials Electronics and Accessories Online Ordering and Home Delivery Seasonal Offers and Discounts</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Appointment Date</label>
+                                <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-sm font-semibold text-textDark">Preferred Time</label>
+                                <input type="time" name="time" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-textDark">Additional Requests</label>
+                            <textarea name="notes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition" placeholder="Any special needs or inquiries..."></textarea>
+                        </div>
+                        <button type="submit" class="premium-btn w-full py-4 rounded-xl text-base font-bold shadow-lg mt-4">Confirm Appointment Slot</button>
+                    </form>
                 </div>
-                <form onsubmit="submitBooking(event, '6a13fc48e3709dfeb6ef487b')" class="p-8 space-y-6">
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Full Name</label>
-                            <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Email Address</label>
-                            <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Phone Number</label>
-                            <input type="tel" name="phone" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Service Package</label>
-                            <select name="service" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm bg-white transition">
-                                <option value="Deep Tissue Release">Deep Tissue Release</option><option value="Rejuvenating Facial">Rejuvenating Facial</option><option value="Signature Spa Ritual">Signature Spa Ritual</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Appointment Date</label>
-                            <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-sm font-semibold text-textDark">Preferred Time</label>
-                            <input type="time" name="time" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition">
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-sm font-semibold text-textDark">Additional Requests</label>
-                        <textarea name="notes" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:outline-none text-sm transition" placeholder="Any special needs or inquiries..."></textarea>
-                    </div>
-                    <button type="submit" class="premium-btn w-full py-4 rounded-xl text-base font-bold shadow-lg mt-4">Confirm Appointment Slot</button>
-                </form>
-            </div>
-        </section>
-        
+            </section>
+            
         <section id="contact" class="py-20 bg-gray-50/50">
             <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16">
                 <div class="space-y-8">
-                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Connect With Aura Spa</h2>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-textDark tracking-tight">Contact UrbanMart</h2>
                     <p class="text-gray-600 leading-relaxed max-w-md">Our customer concierge team is available to assist you. Drop a message or contact us directly.</p>
 
                     <div class="space-y-6">
@@ -305,7 +261,7 @@
                             </div>
                             <div>
                                 <h4 class="font-bold text-textDark">Office Address</h4>
-                                <span class="text-sm text-gray-500">452 Botanical Circle, Serenity Suite 10</span>
+                                <span class="text-sm text-gray-500">kukatpally</span>
                             </div>
                         </div>
                         <div class="flex items-start space-x-4">
@@ -314,7 +270,7 @@
                             </div>
                             <div>
                                 <h4 class="font-bold text-textDark">Phone Support</h4>
-                                <span class="text-sm text-gray-500">(555) 019-8234</span>
+                                <span class="text-sm text-gray-500"></span>
                             </div>
                         </div>
                         <div class="flex items-start space-x-4">
@@ -323,7 +279,7 @@
                             </div>
                             <div>
                                 <h4 class="font-bold text-textDark">Email Desk</h4>
-                                <span class="text-sm text-gray-500">concierge@auraspa.com</span>
+                                <span class="text-sm text-gray-500"></span>
                             </div>
                         </div>
                     </div>
@@ -411,6 +367,9 @@
                 if (result.success) {
                     showNotification("Appointment booked successfully! A confirmation email has been sent.");
                     form.reset();
+                    // Close any active booking modals
+                    const activeModals = document.querySelectorAll('[id^="booking-modal-"]');
+                    activeModals.forEach(modal => modal.classList.add('hidden'));
                 } else {
                     showNotification(result.error || "Booking failed. Please try again.", true);
                 }
