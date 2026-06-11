@@ -188,7 +188,11 @@ class SchemaRenderer:
         async function submitBooking(event, businessId) {{
             event.preventDefault();
             const form = event.target;
-            const data = {{
+            const webId = window.__BE_WID;
+            const backendUrl = (window.__BE_BACKEND_URL || '').replace(/\/+$/, '');
+            
+            let url = `${{backendUrl}}/api/public/submit-consultation`;
+            let payload = {{
                 business_id: businessId,
                 customer_name: form.name.value,
                 customer_email: form.email.value,
@@ -198,22 +202,43 @@ class SchemaRenderer:
                 time: form.time.value,
                 notes: form.notes ? form.notes.value : ''
             }};
+            
+            if (webId) {{
+                url = `${{backendUrl}}/api/bookings/create`;
+                payload.business_id = webId;
+                payload.attorney_name = 'Staff';
+            }} else {{
+                const nameParts = (form.name.value || '').trim().split(/\\s+/);
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || 'Customer';
+                payload = {{
+                    businessId: businessId,
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: form.email.value,
+                    phone: form.phone.value || '',
+                    practiceArea: form.service.value,
+                    date: form.date.value,
+                    time: form.time.value,
+                    caseDescription: form.notes ? form.notes.value : ''
+                }};
+            }}
 
             try {{
-                const res = await fetch('/api/public/submit-consultation', {{
+                const res = await fetch(url, {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(payload)
                 }});
                 const result = await res.json();
-                if (result.success) {{
+                if (result.success || result.message === "Booking request submitted successfully" || res.ok) {{
                     showNotification("Appointment booked successfully! A confirmation email has been sent.");
                     form.reset();
                     // Close any active booking modals
                     const activeModals = document.querySelectorAll('[id^="booking-modal-"]');
                     activeModals.forEach(modal => modal.classList.add('hidden'));
                 }} else {{
-                    showNotification(result.error || "Booking failed. Please try again.", true);
+                    showNotification(result.error || result.message || "Booking failed. Please try again.", true);
                 }}
             }} catch (err) {{
                 showNotification("A network error occurred. Please try again.", true);
@@ -224,26 +249,46 @@ class SchemaRenderer:
         async function submitContact(event, businessId) {{
             event.preventDefault();
             const form = event.target;
-            const data = {{
+            const webId = window.__BE_WID;
+            const backendUrl = (window.__BE_BACKEND_URL || '').replace(/\/+$/, '');
+            
+            let url = `${{backendUrl}}/api/public/submit-contact`;
+            let payload = {{
                 business_id: businessId,
                 name: form.name.value,
                 email: form.email.value,
                 subject: form.subject ? form.subject.value : 'General Inquiry',
                 message: form.message.value
             }};
+            
+            if (webId) {{
+                url = `${{backendUrl}}/api/site/${{webId}}/api/contact`;
+            }} else {{
+                const nameParts = (form.name.value || '').trim().split(/\\s+/);
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || 'Customer';
+                payload = {{
+                    businessId: businessId,
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: form.email.value,
+                    subject: form.subject ? form.subject.value : 'General Inquiry',
+                    message: form.message.value
+                }};
+            }}
 
             try {{
-                const res = await fetch('/api/public/submit-contact', {{
+                const res = await fetch(url, {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(payload)
                 }});
                 const result = await res.json();
-                if (result.success) {{
+                if (result.success || result.message === "Message sent successfully" || res.ok) {{
                     showNotification("Message sent successfully! We will contact you soon.");
                     form.reset();
                 }} else {{
-                    showNotification(result.error || "Message failed to send.", true);
+                    showNotification(result.error || result.message || "Message failed to send.", true);
                 }}
             }} catch (err) {{
                 showNotification("A network error occurred.", true);

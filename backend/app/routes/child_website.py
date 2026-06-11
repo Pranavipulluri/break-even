@@ -18,9 +18,11 @@ def serve_child_website(website_id):
         if not website.get('is_active', True):
             return "Website is not active", 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         # Get business owner's products
         products = list(mongo.db.products.find({
-            'user_id': website['owner_id'],
+            'user_id': owner_id,
             'is_active': True
         }))
         
@@ -28,7 +30,7 @@ def serve_child_website(website_id):
         from app.services.patch_engine import PatchEngine
         from app.services.schema_renderer import SchemaRenderer
         
-        schema = PatchEngine.get_active_schema(website['owner_id'])
+        schema = PatchEngine.get_active_schema(owner_id)
         
         # Merge live products from MongoDB into services section
         if products:
@@ -53,7 +55,7 @@ def serve_child_website(website_id):
         from app.services.tracking_snippet import TrackingSnippet
         html_content = TrackingSnippet.inject(
             html_content,
-            business_id=website['owner_id'],
+            business_id=str(owner_id),
             backend_url="http://localhost:5000",
             website_id=str(website['_id'])
         )
@@ -61,7 +63,7 @@ def serve_child_website(website_id):
         # Track visit
         visit_data = {
             'website_id': str(website['_id']),
-            'business_owner_id': website['owner_id'],
+            'business_owner_id': owner_id,
             'visitor_ip': request.remote_addr,
             'user_agent': request.headers.get('User-Agent'),
             'visited_at': datetime.utcnow(),
@@ -87,9 +89,11 @@ def handle_contact_form(website_id):
         if not website:
             return jsonify({'error': 'Website not found'}), 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         # Create message
         message_data = {
-            'recipient_id': website['owner_id'],
+            'recipient_id': owner_id,
             'content': data.get('message', ''),
             'customer_name': data.get('name', ''),
             'customer_email': data.get('email', ''),
@@ -106,13 +110,13 @@ def handle_contact_form(website_id):
         # Register customer if not exists
         if data.get('email'):
             existing_customer = mongo.db.child_customers.find_one({
-                'business_owner_id': website['owner_id'],
+                'business_owner_id': owner_id,
                 'email': data['email']
             })
             
             if not existing_customer:
                 customer_data = {
-                    'business_owner_id': website['owner_id'],
+                    'business_owner_id': owner_id,
                     'name': data.get('name', ''),
                     'email': data['email'],
                     'phone': data.get('phone'),
@@ -125,7 +129,7 @@ def handle_contact_form(website_id):
                 
                 mongo.db.child_customers.insert_one(customer_data)
         
-        return jsonify({'message': 'Message sent successfully'}), 200
+        return jsonify({'success': True, 'message': 'Message sent successfully'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -141,13 +145,15 @@ def handle_newsletter_signup(website_id):
         if not website:
             return jsonify({'error': 'Website not found'}), 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         email = data.get('email')
         if not email:
             return jsonify({'error': 'Email is required'}), 400
         
         # Check if customer already exists
         existing_customer = mongo.db.child_customers.find_one({
-            'business_owner_id': website['owner_id'],
+            'business_owner_id': owner_id,
             'email': email
         })
         
@@ -165,7 +171,7 @@ def handle_newsletter_signup(website_id):
         else:
             # Create new customer
             customer_data = {
-                'business_owner_id': website['owner_id'],
+                'business_owner_id': owner_id,
                 'name': data.get('name', 'Newsletter Subscriber'),
                 'email': email,
                 'website_id': website_id,
@@ -177,7 +183,7 @@ def handle_newsletter_signup(website_id):
             
             mongo.db.child_customers.insert_one(customer_data)
         
-        return jsonify({'message': 'Successfully subscribed to newsletter'}), 200
+        return jsonify({'success': True, 'message': 'Successfully subscribed to newsletter'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -193,9 +199,11 @@ def handle_feedback_submission(website_id):
         if not website:
             return jsonify({'error': 'Website not found'}), 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         # Create feedback entry
         feedback_data = {
-            'business_owner_id': website['owner_id'],  
+            'business_owner_id': owner_id,  
             'customer_email': data.get('email', ''),
             'customer_name': data.get('name', 'Anonymous'),
             'rating': int(data.get('rating', 5)),
@@ -206,7 +214,7 @@ def handle_feedback_submission(website_id):
         
         mongo.db.customer_feedback.insert_one(feedback_data)
         
-        return jsonify({'message': 'Feedback submitted successfully'}), 200
+        return jsonify({'success': True, 'message': 'Feedback submitted successfully'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -220,9 +228,11 @@ def get_website_products(website_id):
         if not website:
             return jsonify({'error': 'Website not found'}), 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         # Get products
         products = list(mongo.db.products.find({
-            'user_id': website['owner_id'],
+            'user_id': owner_id,
             'is_active': True
         }))
         
@@ -247,9 +257,11 @@ def track_product_interaction(website_id):
         if not website:
             return jsonify({'error': 'Website not found'}), 404
         
+        owner_id = ObjectId(website['owner_id']) if isinstance(website['owner_id'], str) else website['owner_id']
+        
         # Track interaction
         interaction_data = {
-            'business_owner_id': website['owner_id'],
+            'business_owner_id': owner_id,
             'website_id': website_id,
             'product_id': ObjectId(data.get('product_id')) if data.get('product_id') else None,
             'interaction_type': data.get('type', 'view'),  # view, inquiry, click
