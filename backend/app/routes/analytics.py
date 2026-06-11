@@ -264,14 +264,57 @@ def get_product_analytics():
             product for product in products
             if product['stock'] < 10  # Configurable threshold
         ]
-        
+
+        # ── Aggregate real inquiries from child website form submissions ──
+        # Count contact messages, consultation bookings, and client messages
+        # that came in through the mini-websites for this business owner.
+        biz_oid = ObjectId(current_user_id)
+
+        # Try matching by both owner_id and business_id fields (schema varies by route)
+        def count_for_business(collection_name):
+            col = mongo.db[collection_name]
+            return (
+                col.count_documents({'business_id': biz_oid}) +
+                col.count_documents({'owner_id': biz_oid})
+            )
+
+        contact_count = count_for_business('contact_messages')
+        consultation_count = count_for_business('consultation_bookings')
+        client_msg_count = count_for_business('client_messages')
+        beauty_booking_count = count_for_business('beauty_bookings')
+        measurement_booking_count = count_for_business('measurement_bookings')
+
+        # Also count product_interactions-based inquiries
+        interaction_inquiry_count = sum(product_inquiries.values())
+        interaction_view_count = sum(product_views.values())
+
+        # Total message inquiries = all form submissions from child websites
+        total_message_inquiries = (
+            contact_count + consultation_count + client_msg_count +
+            beauty_booking_count + measurement_booking_count +
+            interaction_inquiry_count
+        )
+        total_service_views = interaction_view_count
+
+        # Consultation rate: consultations / total inquiries
+        consultation_rate = (
+            (consultation_count / total_message_inquiries * 100)
+            if total_message_inquiries > 0 else 0.0
+        )
+
         return jsonify({
             'productAnalytics': product_analytics,
             'categoryDistribution': dict(category_counter),
             'lowStockAlerts': len(low_stock_products),
             'totalProducts': len(products),
-            'totalViews': sum(product_views.values()),
-            'totalInquiries': sum(product_inquiries.values())
+            'totalViews': total_service_views,
+            'totalInquiries': interaction_inquiry_count,
+            # ── Child website form submission counters ──
+            'totalMessageInquiries': total_message_inquiries,
+            'totalConsultations': consultation_count,
+            'totalContacts': contact_count,
+            'totalBookings': beauty_booking_count + measurement_booking_count,
+            'consultationRate': round(consultation_rate, 1),
         }), 200
         
     except Exception as e:
