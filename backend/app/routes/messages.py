@@ -16,26 +16,102 @@ def get_messages():
         current_user_id = get_jwt_identity()
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
+        msg_filter = request.args.get('filter', 'all')
         
         skip = (page - 1) * per_page
+        biz_oid = ObjectId(current_user_id)
         
-        messages = list(mongo.db.messages.find({
-            'recipient_id': ObjectId(current_user_id)
-        }).sort('created_at', -1).skip(skip).limit(per_page))
+        # 1. Fetch from 'messages'
+        db_messages = list(mongo.db.messages.find({'recipient_id': biz_oid}))
         
-        total = mongo.db.messages.count_documents({
-            'recipient_id': ObjectId(current_user_id)
-        })
+        # 2. Fetch from 'contact_messages'
+        contact_messages = list(mongo.db.contact_messages.find({'business_id': biz_oid}))
         
-        # Convert ObjectId to string
-        for message in messages:
-            message['_id'] = str(message['_id'])
-            message['recipient_id'] = str(message['recipient_id'])
-            if 'sender_id' in message:
-                message['sender_id'] = str(message['sender_id'])
+        # 3. Fetch from 'client_messages'
+        client_messages = list(mongo.db.client_messages.find({'business_id': biz_oid}))
+        
+        # Normalize and merge
+        normalized = []
+        
+        for msg in db_messages:
+            normalized.append({
+                '_id': str(msg['_id']),
+                'recipient_id': str(msg['recipient_id']),
+                'customer_name': msg.get('customer_name', 'Anonymous'),
+                'customer_email': msg.get('customer_email', ''),
+                'customer_phone': msg.get('customer_phone', ''),
+                'content': msg.get('content', ''),
+                'created_at': msg.get('created_at'),
+                'message_type': msg.get('message_type', 'inquiry'),
+                'is_read': msg.get('is_read', False),
+                'reply': msg.get('reply', ''),
+                'reply_sent': bool(msg.get('reply', '')),
+                'replied_at': msg.get('replied_at'),
+                'status': msg.get('status', 'new')
+            })
+            
+        for msg in contact_messages:
+            cust_info = msg.get('customer_info', {}) or {}
+            normalized.append({
+                '_id': str(msg['_id']),
+                'recipient_id': str(msg['business_id']),
+                'customer_name': f"{cust_info.get('first_name', '')} {cust_info.get('last_name', '')}".strip() or "Anonymous",
+                'customer_email': cust_info.get('email', ''),
+                'customer_phone': cust_info.get('phone', ''),
+                'content': msg.get('message', ''),
+                'created_at': msg.get('created_at'),
+                'message_type': 'contact_form',
+                'is_read': msg.get('is_read', False),
+                'reply': msg.get('reply', ''),
+                'reply_sent': bool(msg.get('reply', '')),
+                'replied_at': msg.get('replied_at'),
+                'status': msg.get('status', 'new')
+            })
+            
+        for msg in client_messages:
+            cust_info = msg.get('customer_info', {}) or {}
+            normalized.append({
+                '_id': str(msg['_id']),
+                'recipient_id': str(msg['business_id']),
+                'customer_name': f"{cust_info.get('first_name', '')} {cust_info.get('last_name', '')}".strip() or "Anonymous",
+                'customer_email': cust_info.get('email', ''),
+                'customer_phone': cust_info.get('phone', ''),
+                'content': msg.get('message', ''),
+                'created_at': msg.get('created_at'),
+                'message_type': 'contact_form',
+                'is_read': msg.get('is_read', False),
+                'reply': msg.get('reply', ''),
+                'reply_sent': bool(msg.get('reply', '')),
+                'replied_at': msg.get('replied_at'),
+                'status': msg.get('status', 'new')
+            })
+            
+        # Apply filter
+        if msg_filter == 'unread':
+            normalized = [m for m in normalized if not m['is_read']]
+        elif msg_filter == 'replied':
+            normalized = [m for m in normalized if m['reply_sent']]
+            
+        # Helper to parse and sort by date
+        def get_date(item):
+            dt = item.get('created_at')
+            if isinstance(dt, datetime):
+                return dt
+            if isinstance(dt, str):
+                try:
+                    return datetime.fromisoformat(dt.replace('Z', '+00:00'))
+                except Exception:
+                    pass
+            return datetime.min
+            
+        normalized.sort(key=get_date, reverse=True)
+        
+        # Paginate
+        total = len(normalized)
+        paginated = normalized[skip : skip + per_page]
         
         return jsonify({
-            'messages': messages,
+            'messages': paginated,
             'total': total,
             'page': page,
             'per_page': per_page,
@@ -107,17 +183,33 @@ def reply_to_message(message_id):
         current_user_id = get_jwt_identity()
         data = request.get_json()
         
-        # Check if message exists and belongs to current user
+        # Try messages first
         message = mongo.db.messages.find_one({
             '_id': ObjectId(message_id),
             'recipient_id': ObjectId(current_user_id)
         })
+        collection_name = 'messages'
         
         if not message:
+            message = mongo.db.contact_messages.find_one({
+                '_id': ObjectId(message_id),
+                'business_id': ObjectId(current_user_id)
+            })
+            collection_name = 'contact_messages'
+            
+        if not message:
+            message = mongo.db.client_messages.find_one({
+                '_id': ObjectId(message_id),
+                'business_id': ObjectId(current_user_id)
+            })
+            collection_name = 'client_messages'
+            
+        if not message:
             return jsonify({'error': 'Message not found'}), 404
-        
+            
         # Update message with reply
-        mongo.db.messages.update_one(
+        col = mongo.db[collection_name]
+        col.update_one(
             {'_id': ObjectId(message_id)},
             {
                 '$set': {
@@ -131,17 +223,25 @@ def reply_to_message(message_id):
         # Send email reply to customer
         try:
             email_service = EmailService()
+            # Map fields for email sending
+            cust_email = message.get('customer_email')
+            cust_name = message.get('customer_name')
+            if not cust_email or not cust_name:
+                cust_info = message.get('customer_info', {}) or {}
+                cust_email = cust_email or cust_info.get('email')
+                cust_name = cust_name or f"{cust_info.get('first_name', '')} {cust_info.get('last_name', '')}".strip() or "Valued Customer"
+                
             user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
             email_service.send_message_reply(
-                message['customer_email'],
-                message['customer_name'],
+                cust_email,
+                cust_name,
                 user['name'],
                 user['business_name'],
                 data['reply']
             )
         except Exception as email_error:
             print(f"Failed to send email reply: {email_error}")
-        
+            
         return jsonify({'message': 'Reply sent successfully'}), 200
         
     except Exception as e:
@@ -152,24 +252,32 @@ def reply_to_message(message_id):
 def mark_message_read(message_id):
     try:
         current_user_id = get_jwt_identity()
+        biz_oid = ObjectId(current_user_id)
+        msg_oid = ObjectId(message_id)
         
-        # Update message status
+        # Try messages first
         result = mongo.db.messages.update_one(
-            {
-                '_id': ObjectId(message_id),
-                'recipient_id': ObjectId(current_user_id)
-            },
-            {
-                '$set': {
-                    'is_read': True,
-                    'read_at': datetime.utcnow()
-                }
-            }
+            {'_id': msg_oid, 'recipient_id': biz_oid},
+            {'$set': {'is_read': True, 'read_at': datetime.utcnow()}}
         )
         
         if result.matched_count == 0:
+            # Try contact_messages
+            result = mongo.db.contact_messages.update_one(
+                {'_id': msg_oid, 'business_id': biz_oid},
+                {'$set': {'is_read': True, 'read_at': datetime.utcnow()}}
+            )
+            
+        if result.matched_count == 0:
+            # Try client_messages
+            result = mongo.db.client_messages.update_one(
+                {'_id': msg_oid, 'business_id': biz_oid},
+                {'$set': {'is_read': True, 'read_at': datetime.utcnow()}}
+            )
+            
+        if result.matched_count == 0:
             return jsonify({'error': 'Message not found'}), 404
-        
+            
         return jsonify({'message': 'Message marked as read'}), 200
         
     except Exception as e:
@@ -180,13 +288,26 @@ def mark_message_read(message_id):
 def get_unread_count():
     try:
         current_user_id = get_jwt_identity()
+        biz_oid = ObjectId(current_user_id)
         
-        count = mongo.db.messages.count_documents({
-            'recipient_id': ObjectId(current_user_id),
+        count_msg = mongo.db.messages.count_documents({
+            'recipient_id': biz_oid,
             'is_read': False
         })
         
-        return jsonify({'unreadCount': count}), 200
+        count_contact = mongo.db.contact_messages.count_documents({
+            'business_id': biz_oid,
+            'is_read': False
+        })
+        
+        count_client = mongo.db.client_messages.count_documents({
+            'business_id': biz_oid,
+            'is_read': False
+        })
+        
+        total_count = count_msg + count_contact + count_client
+        
+        return jsonify({'unreadCount': total_count}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
