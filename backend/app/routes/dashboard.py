@@ -24,10 +24,13 @@ def get_dashboard_data():
             'business_owner_id': ObjectId(current_user_id)
         })
         
-        # Get messages count
-        total_messages = mongo.db.messages.count_documents({
-            'recipient_id': ObjectId(current_user_id)
-        })
+        # Get messages count from all collections
+        biz_oid = ObjectId(current_user_id)
+        total_messages = (
+            mongo.db.messages.count_documents({'recipient_id': biz_oid}) +
+            mongo.db.contact_messages.count_documents({'business_id': biz_oid}) +
+            mongo.db.client_messages.count_documents({'business_id': biz_oid})
+        )
         
         # Get QR scans
         qr_analytics = mongo.db.qr_analytics.find_one({
@@ -45,10 +48,58 @@ def get_dashboard_data():
         for order in orders:
             monthly_revenue += order.get('total_amount', 0)
         
-        # Get recent activity
+        # Get recent activity from all message collections
         recent_messages = list(mongo.db.messages.find({
-            'recipient_id': ObjectId(current_user_id)
+            'recipient_id': biz_oid
         }).sort('created_at', -1).limit(5))
+        
+        recent_contact = list(mongo.db.contact_messages.find({
+            'business_id': biz_oid
+        }).sort('created_at', -1).limit(5))
+        
+        recent_client = list(mongo.db.client_messages.find({
+            'business_id': biz_oid
+        }).sort('created_at', -1).limit(5))
+        
+        # Normalize and merge recent messages
+        normalized_messages = []
+        for msg in recent_messages:
+            normalized_messages.append({
+                'id': str(msg['_id']),
+                'content': msg.get('content', '')[:50] + '...' if len(msg.get('content', '')) > 50 else msg.get('content', ''),
+                'customer_name': msg.get('customer_name', 'Anonymous'),
+                'created_at': msg['created_at']
+            })
+            
+        for msg in recent_contact:
+            cust_info = msg.get('customer_info', {}) or {}
+            cust_name = f"{cust_info.get('first_name', '')} {cust_info.get('last_name', '')}".strip() or "Anonymous"
+            normalized_messages.append({
+                'id': str(msg['_id']),
+                'content': msg.get('message', '')[:50] + '...' if len(msg.get('message', '')) > 50 else msg.get('message', ''),
+                'customer_name': cust_name,
+                'created_at': msg['created_at']
+            })
+            
+        for msg in recent_client:
+            cust_info = msg.get('customer_info', {}) or {}
+            cust_name = f"{cust_info.get('first_name', '')} {cust_info.get('last_name', '')}".strip() or "Anonymous"
+            normalized_messages.append({
+                'id': str(msg['_id']),
+                'content': msg.get('message', '')[:50] + '...' if len(msg.get('message', '')) > 50 else msg.get('message', ''),
+                'customer_name': cust_name,
+                'created_at': msg['created_at']
+            })
+            
+        # Sort combined recent messages by date
+        def get_date(item):
+            dt = item.get('created_at')
+            if isinstance(dt, datetime):
+                return dt
+            return datetime.min
+            
+        normalized_messages.sort(key=get_date, reverse=True)
+        recent_messages_feed = normalized_messages[:5]
         
         recent_customers = list(mongo.db.child_customers.find({
             'business_owner_id': ObjectId(current_user_id)
@@ -86,14 +137,7 @@ def get_dashboard_data():
             },
             'analytics': analytics_data,
             'recentActivity': {
-                'messages': [
-                    {
-                        'id': str(msg['_id']),
-                        'content': msg['content'][:50] + '...' if len(msg['content']) > 50 else msg['content'],
-                        'customer_name': msg.get('customer_name', 'Anonymous'),
-                        'created_at': msg['created_at']
-                    } for msg in recent_messages
-                ],
+                'messages': recent_messages_feed,
                 'customers': [
                     {
                         'id': str(customer['_id']),
@@ -118,10 +162,22 @@ def get_dashboard_stats():
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
         
-        today_messages = mongo.db.messages.count_documents({
-            'recipient_id': ObjectId(current_user_id),
-            'created_at': {'$gte': today_start, '$lt': today_end}
-        })
+        biz_oid = ObjectId(current_user_id)
+        
+        today_messages = (
+            mongo.db.messages.count_documents({
+                'recipient_id': biz_oid,
+                'created_at': {'$gte': today_start, '$lt': today_end}
+            }) +
+            mongo.db.contact_messages.count_documents({
+                'business_id': biz_oid,
+                'created_at': {'$gte': today_start, '$lt': today_end}
+            }) +
+            mongo.db.client_messages.count_documents({
+                'business_id': biz_oid,
+                'created_at': {'$gte': today_start, '$lt': today_end}
+            })
+        )
         
         today_customers = mongo.db.child_customers.count_documents({
             'business_owner_id': ObjectId(current_user_id),

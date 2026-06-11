@@ -783,6 +783,111 @@ const AITools = () => {
     );
   };
 
+  const BusinessCoach = () => {
+    const [coachType, setCoachType] = useState('general');
+
+    const coachTypes = [
+      { value: 'general', label: 'General Strategy', icon: '🧠' },
+      { value: 'marketing', label: 'Marketing & Growth', icon: '📢' },
+      { value: 'products', label: 'Products & Catalog', icon: '📦' },
+      { value: 'website', label: 'Website & Digital', icon: '💻' }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="card">
+          <h3 className="heading-3 text-gray-900 mb-6">Select Suggestions Category</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {coachTypes.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setCoachType(type.value)}
+                className={`p-4 rounded-xl border-2 transition-all duration-200 text-center hover:scale-105 ${
+                  coachType === type.value
+                    ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-2xl mb-2">{type.icon}</div>
+                <div className="font-medium text-sm">{type.label}</div>
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => getBusinessSuggestions(coachType)}
+            disabled={loading}
+            className="btn-primary w-full mt-6 flex items-center justify-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 border-none hover:from-green-700 hover:to-emerald-700 text-white"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Analyzing & Coaching...</span>
+              </>
+            ) : (
+              <>
+                <Brain size={18} />
+                <span>Get AI Suggestions</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {suggestions && suggestions.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="heading-3 text-gray-900 flex items-center space-x-2 px-1">
+              <Sparkles size={20} className="text-green-500" />
+              <span>AI Coaching Recommendations</span>
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {suggestions.map((s, index) => {
+                let priorityClass = 'bg-gray-100 text-gray-700 border-gray-200';
+                if (s.priority === 'high') priorityClass = 'bg-red-50 text-red-700 border-red-200';
+                else if (s.priority === 'medium') priorityClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+                
+                return (
+                  <div key={index} className="card border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold capitalize ${priorityClass}`}>
+                          {s.priority || 'medium'} Priority
+                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-medium capitalize">
+                          {s.category || 'strategy'}
+                        </span>
+                      </div>
+                      
+                      <h4 className="font-bold text-gray-950 text-lg mb-2">{s.title}</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed mb-6">{s.description}</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-50 flex flex-wrap gap-2 text-xs">
+                      <div className="flex items-center text-gray-500">
+                        <span className="font-medium mr-1">Effort:</span>
+                        <span className="capitalize font-semibold text-gray-700">{s.effort || 'low'}</span>
+                      </div>
+                      <span className="text-gray-300">|</span>
+                      <div className="flex items-center text-gray-500">
+                        <span className="font-medium mr-1">Impact:</span>
+                        <span className="capitalize font-semibold text-gray-700">{s.impact || 'high'}</span>
+                      </div>
+                      <span className="text-gray-300">|</span>
+                      <div className="flex items-center text-gray-500">
+                        <span className="font-medium mr-1">Timeline:</span>
+                        <span className="capitalize font-semibold text-gray-700">{s.timeline || 'immediate'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const AIAssistant = () => {
     const [chatLoading, setChatLoading] = useState(false);
 
@@ -990,13 +1095,7 @@ const AITools = () => {
         )}
         {activeTab === 'content' && <ContentGenerator />}
         {activeTab === 'images' && <ImageGenerator />}
-        {activeTab === 'suggestions' && (
-          <div className="card text-center py-16">
-            <Brain size={48} className="text-green-500 mx-auto mb-4" />
-            <h3 className="heading-3 text-gray-900 mb-2">Business Coach Coming Soon</h3>
-            <p className="text-gray-600">AI-powered business suggestions and coaching features are in development.</p>
-          </div>
-        )}
+        {activeTab === 'suggestions' && <BusinessCoach />}
         {activeTab === 'chat' && <AIAssistant />}
       </div>
     </div>

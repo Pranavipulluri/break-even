@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import Modal from '../components/common/Modal';
@@ -11,6 +11,12 @@ const Products = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Comments state variables
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
@@ -65,6 +71,24 @@ const Products = () => {
       } catch (error) {
         toast.error('Failed to delete product');
       }
+    }
+  };
+
+  const handleViewComments = async (product) => {
+    setSelectedProduct(product);
+    setIsCommentsModalOpen(true);
+    setIsLoadingComments(true);
+    try {
+      const response = await api.get(`/public/products/${product._id}/comments`);
+      if (response.data && response.data.success) {
+        setComments(response.data.comments);
+      } else {
+        setComments([]);
+      }
+    } catch (error) {
+      toast.error('Failed to fetch product comments');
+    } finally {
+      setIsLoadingComments(false);
     }
   };
 
@@ -135,17 +159,26 @@ const Products = () => {
             <div className="flex space-x-2 mt-4">
               <button
                 onClick={() => handleEdit(product)}
-                className="flex-1 btn-secondary flex items-center justify-center space-x-1"
+                className="flex-grow btn-secondary flex items-center justify-center space-x-1 py-2"
+                title="Edit Product"
               >
                 <Edit size={16} />
                 <span>Edit</span>
               </button>
               <button
+                onClick={() => handleViewComments(product)}
+                className="btn-secondary flex items-center justify-center space-x-1 px-3 py-2"
+                title="View Comments"
+              >
+                <MessageSquare size={16} />
+                <span className="hidden sm:inline">Comments</span>
+              </button>
+              <button
                 onClick={() => handleDelete(product._id)}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-1"
+                className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg transition-colors flex items-center justify-center"
+                title="Delete Product"
               >
                 <Trash2 size={16} />
-                <span>Delete</span>
               </button>
             </div>
           </div>
@@ -284,6 +317,70 @@ const Products = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Product Comments Modal */}
+      <Modal
+        isOpen={isCommentsModalOpen}
+        onClose={() => {
+          setIsCommentsModalOpen(false);
+          setSelectedProduct(null);
+          setComments([]);
+        }}
+        title={`Comments for ${selectedProduct?.name || ''}`}
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          {isLoadingComments ? (
+            <div className="text-center py-8 text-gray-500">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-2"></div>
+              <span>Loading comments...</span>
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <MessageSquare size={36} className="mx-auto mb-2 text-gray-300" />
+              <p>No comments on this product yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {comments.map((comment) => {
+                const sentimentLabel = comment.sentiment?.label || 'neutral';
+                const sentimentScore = comment.sentiment?.score || 0;
+                
+                let badgeClass = 'bg-gray-100 text-gray-800 border-gray-200';
+                if (sentimentLabel === 'positive') {
+                  badgeClass = 'bg-green-50 text-green-700 border-green-200';
+                } else if (sentimentLabel === 'negative') {
+                  badgeClass = 'bg-red-50 text-red-700 border-red-200';
+                }
+                
+                return (
+                  <div key={comment._id} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-semibold text-gray-900 text-sm">{comment.name}</span>
+                        <span className="text-gray-500 text-xs ml-2">
+                          {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ''}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-1.5">
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-medium capitalize ${badgeClass}`}>
+                          {sentimentLabel}
+                        </span>
+                        {sentimentScore > 0 && (
+                          <span className="text-[10px] text-gray-400">
+                            ({Math.round(sentimentScore * 100)}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-gray-700 text-sm whitespace-pre-wrap">{comment.comment}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

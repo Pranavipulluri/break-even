@@ -1,12 +1,35 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import mongo
 from app.models.product import Product
 from bson import ObjectId
 from datetime import datetime
+import logging
 
 products_bp = Blueprint('products', __name__)
+logger = logging.getLogger(__name__)
+
+def trigger_site_redeploy(business_id):
+    """Automatically rebuild and deploy child website when products are modified"""
+    try:
+        b_id_str = str(business_id)
+        # Find active schema
+        active_schema = mongo.db.website_schemas.find_one({
+            'business_id': b_id_str,
+            'is_active': True
+        })
+        if active_schema:
+            from app.services.schema_renderer import SchemaRenderer
+            from app.services.patch_engine import PatchEngine
+            
+            rendered_html = SchemaRenderer.render(active_schema)
+            # Write to disk
+            PatchEngine.write_website_to_disk(b_id_str, rendered_html)
+            # Push to Netlify (best-effort)
+            PatchEngine._deploy_to_netlify(b_id_str, rendered_html)
+            logger.info(f"🔄 Website auto-redeployed on product change for business {b_id_str}")
+    except Exception as e:
+        logger.warning(f"Could not auto-redeploy site for business {business_id} on product change: {e}")
 
 @products_bp.route('/products', methods=['GET'])
 @jwt_required()
@@ -27,6 +50,7 @@ def get_products():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 @products_bp.route('/products', methods=['POST'])
 @jwt_required()
 def create_product():
@@ -61,6 +85,9 @@ def create_product():
         created_product = mongo.db.products.find_one({'_id': result.inserted_id})
         created_product['_id'] = str(created_product['_id'])
         created_product['user_id'] = str(created_product['user_id'])
+        
+        # Trigger website redeploy to Netlify/disk
+        trigger_site_redeploy(current_user_id)
         
         return jsonify(created_product), 201
         
@@ -110,6 +137,9 @@ def update_product(product_id):
         updated_product['_id'] = str(updated_product['_id'])
         updated_product['user_id'] = str(updated_product['user_id'])
         
+        # Trigger website redeploy to Netlify/disk
+        trigger_site_redeploy(current_user_id)
+        
         return jsonify(updated_product), 200
         
     except Exception as e:
@@ -134,6 +164,9 @@ def delete_product(product_id):
             {'_id': ObjectId(product_id)},
             {'$set': {'is_active': False, 'updated_at': datetime.utcnow()}}
         )
+        
+        # Trigger website redeploy to Netlify/disk
+        trigger_site_redeploy(current_user_id)
         
         return jsonify({'message': 'Product deleted successfully'}), 200
         
