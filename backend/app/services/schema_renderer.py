@@ -113,13 +113,43 @@ class SchemaRenderer:
         palette = cls.COLOR_PALETTES.get(palette_name, cls.COLOR_PALETTES["spa-serenity"])
         font_family = theme.get("font", "Inter")
 
+        # Automatically merge live products from database if available
+        business_id = schema.get("business_id")
+        if business_id:
+            try:
+                from app import mongo
+                from bson import ObjectId
+                query_id = ObjectId(business_id) if isinstance(business_id, str) else business_id
+                products = list(mongo.db.products.find({
+                    'user_id': query_id,
+                    'is_active': True
+                }))
+                if products:
+                    for section in schema.get("sections", []):
+                        if section.get("type") == "services":
+                            section["content"]["items"] = [
+                                {
+                                    "id": str(p.get("_id")),
+                                    "name": p.get("name"),
+                                    "price": f"${p.get('price')}" if p.get('price') is not None else "",
+                                    "description": p.get("description", ""),
+                                    "icon": p.get("icon", "fas fa-tag"),
+                                    "image": p.get("image", "")
+                                }
+                                for p in products
+                            ]
+                            break
+            except Exception as e:
+                logger.warning(f"Could not merge live products in SchemaRenderer.render: {e}")
+
         css_block = cls._compile_css(palette, font_family)
         navbar_html = cls._compile_navbar(schema)
 
         # Deterministic section compilation via component registry
         sections_html = ""
+        business_id_str = str(business_id) if business_id else None
         for section in schema.get("sections", []):
-            sections_html += cls._compile_section(section, palette)
+            sections_html += cls._compile_section(section, palette, business_id_str)
 
         schema_version = schema.get("schema_version", schema.get("version", 1))
 
@@ -294,6 +324,116 @@ class SchemaRenderer:
                 showNotification("A network error occurred.", true);
             }}
         }}
+
+        // Product Comments management
+        async function fetchComments(productId) {{
+            const listContainer = document.getElementById(`comments-list-${{productId}}`);
+            const countBadge = document.getElementById(`comment-count-${{productId}}`);
+            if (!listContainer) return;
+
+            const backendUrl = (window.__BE_BACKEND_URL || '').replace(/\/+$/, '');
+            const url = `${{backendUrl}}/api/public/products/${{productId}}/comments`;
+
+            try {{
+                const res = await fetch(url);
+                const result = await res.json();
+                if (result.success && Array.isArray(result.comments)) {{
+                    const comments = result.comments;
+                    
+                    if (countBadge) {{
+                        countBadge.innerText = comments.length;
+                        if (comments.length > 0) {{
+                            countBadge.classList.remove('hidden');
+                        }} else {{
+                            countBadge.classList.add('hidden');
+                        }}
+                    }}
+
+                    if (comments.length === 0) {{
+                        listContainer.innerHTML = '<p class="text-[10px] text-gray-400 italic text-left">No comments yet. Be the first to comment!</p>';
+                    }} else {{
+                        listContainer.innerHTML = comments.map(c => {{
+                            const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+                            return `
+                                <div class="bg-gray-50 rounded-xl p-2.5 space-y-1 text-left">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-[11px] font-bold text-textDark">${{c.name}}</span>
+                                        <span class="text-[9px] text-gray-400">${{dateStr}}</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-600">${{c.comment}}</p>
+                                </div>
+                            `;
+                        }}).join('');
+                    }}
+                }} else {{
+                    listContainer.innerHTML = '<p class="text-[10px] text-red-400 text-left">Failed to load comments.</p>';
+                }}
+            }} catch (err) {{
+                listContainer.innerHTML = '<p class="text-[10px] text-red-400 text-left">Error loading comments.</p>';
+            }}
+        }}
+
+        async function toggleComments(productId) {{
+            const section = document.getElementById(`comments-section-${{productId}}`);
+            if (!section) return;
+
+            const isHidden = section.classList.contains('hidden');
+            if (isHidden) {{
+                section.classList.remove('hidden');
+                await fetchComments(productId);
+            }} else {{
+                section.classList.add('hidden');
+            }}
+        }}
+
+        async function submitProductComment(event, productId, businessId) {{
+            event.preventDefault();
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            const backendUrl = (window.__BE_BACKEND_URL || '').replace(/\/+$/, '');
+            const url = `${{backendUrl}}/api/public/products/${{productId}}/comments`;
+            
+            const payload = {{
+                business_id: businessId,
+                name: form.name.value.trim(),
+                comment: form.comment.value.trim()
+            }};
+
+            try {{
+                const res = await fetch(url, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }});
+                const result = await res.json();
+                if (result.success) {{
+                    showNotification("Comment posted successfully!");
+                    form.reset();
+                    await fetchComments(productId);
+                }} else {{
+                    showNotification(result.message || "Failed to post comment.", true);
+                }}
+            }} catch (err) {{
+                showNotification("A network error occurred.", true);
+            }} finally {{
+                if (submitBtn) submitBtn.disabled = false;
+            }}
+        }}
+
+        // On DOM load, fetch initial comment counts for all products
+        document.addEventListener("DOMContentLoaded", () => {{
+            setTimeout(() => {{
+                const productElements = document.querySelectorAll("[data-track-product-view]");
+                productElements.forEach(el => {{
+                    const productId = el.getAttribute("data-product-id");
+                    if (productId) {{
+                        fetchComments(productId);
+                    }}
+                }});
+            }}, 500); // Small delay to allow script environment initialization
+        }});
     </script>
 </body>
 </html>
@@ -408,17 +548,26 @@ class SchemaRenderer:
     # ================================================================
 
     @classmethod
-    def _compile_section(cls, section, palette):
+    def _compile_section(cls, section, palette, business_id=None):
         sec_type = section.get("type")
         render_method_name = cls.COMPONENT_MAP.get(sec_type)
         if render_method_name:
             render_method = getattr(cls, render_method_name)
-            return render_method(
-                section.get("id"),
-                section.get("variant", f"{sec_type}-split"),
-                section.get("content", {}),
-                palette,
-            )
+            if render_method_name == "_render_services":
+                return render_method(
+                    section.get("id"),
+                    section.get("variant", f"{sec_type}-split"),
+                    section.get("content", {}),
+                    palette,
+                    business_id,
+                )
+            else:
+                return render_method(
+                    section.get("id"),
+                    section.get("variant", f"{sec_type}-split"),
+                    section.get("content", {}),
+                    palette,
+                )
         return ""
 
     # ================================================================
@@ -489,7 +638,37 @@ class SchemaRenderer:
     # ================================================================
 
     @classmethod
-    def _render_services(cls, sec_id, variant, content, palette):
+    def _render_comments_section(cls, p_id, business_id):
+        if not business_id or not p_id:
+            return ""
+        return f'''
+        <div class="mt-4 border-t border-gray-100 pt-4 w-full">
+            <button onclick="toggleComments('{p_id}')" class="text-xs text-gray-500 hover:text-primary transition flex items-center gap-1.5 focus:outline-none">
+                <i class="far fa-comment-dots text-sm"></i>
+                <span>Comments</span>
+                <span id="comment-count-{p_id}" class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded-full hidden">0</span>
+            </button>
+            
+            <div id="comments-section-{p_id}" class="hidden mt-3 space-y-3">
+                <div id="comments-list-{p_id}" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <p class="text-[11px] text-gray-400 italic mr-2">Loading comments...</p>
+                </div>
+                
+                <form onsubmit="submitProductComment(event, '{p_id}', '{business_id}')" class="space-y-2 pt-2 border-t border-gray-100">
+                    <div class="grid grid-cols-1 gap-2">
+                        <input type="text" name="name" placeholder="Your Name" required class="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:border-primary text-textDark bg-white">
+                    </div>
+                    <textarea name="comment" placeholder="Write a comment..." required class="w-full text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:border-primary h-12 resize-none text-textDark bg-white"></textarea>
+                    <div class="flex justify-end">
+                        <button type="submit" class="premium-btn text-white text-[10px] px-3.5 py-1.5 rounded-lg font-semibold">Post Comment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        '''
+
+    @classmethod
+    def _render_services(cls, sec_id, variant, content, palette, business_id=None):
         title = content.get("title", "Experience Premium Services")
         items = content.get("items", [])
 
@@ -519,21 +698,26 @@ class SchemaRenderer:
                         </div>
                     '''
 
+                comments_html = cls._render_comments_section(p_id, business_id)
+
                 items_html += f'''
-                <div class="card-hover bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
-                    <div class="flex items-start sm:items-center space-x-4">
-                        {image_html}
-                        <div>
-                            <h3 class="text-lg font-bold text-textDark">{p_name}</h3>
-                            <p class="text-gray-600 text-sm leading-relaxed max-w-xl">{item.get("description", "")}</p>
+                <div class="card-hover bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col gap-4" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                        <div class="flex items-start sm:items-center space-x-4">
+                            {image_html}
+                            <div>
+                                <h3 class="text-lg font-bold text-textDark">{p_name}</h3>
+                                <p class="text-gray-600 text-sm leading-relaxed max-w-xl">{item.get("description", "")}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-4 sm:pt-0 mt-4 sm:mt-0">
+                            {price_tag}
+                            <a href="#contact" class="premium-btn px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                                Consult Now
+                            </a>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 pt-4 sm:pt-0 mt-4 sm:mt-0">
-                        {price_tag}
-                        <a href="#contact" class="premium-btn px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
-                            Consult Now
-                        </a>
-                    </div>
+                    {comments_html}
                 </div>
                 '''
             
@@ -569,6 +753,8 @@ class SchemaRenderer:
                         </div>
                     '''
 
+                comments_html = cls._render_comments_section(p_id, business_id)
+
                 items_html += f'''
                 <div class="snap-start flex-shrink-0 w-[290px] sm:w-[350px] bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
                     <div>
@@ -579,9 +765,12 @@ class SchemaRenderer:
                         </div>
                         <p class="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3">{item.get("description", "")}</p>
                     </div>
-                    <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
-                        Consult Now <i class="fas fa-arrow-right text-xs"></i>
-                    </a>
+                    <div class="mt-auto space-y-4">
+                        <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                            Consult Now <i class="fas fa-arrow-right text-xs"></i>
+                        </a>
+                        {comments_html}
+                    </div>
                 </div>
                 '''
             
@@ -627,6 +816,8 @@ class SchemaRenderer:
                         </div>
                     '''
 
+                comments_html = cls._render_comments_section(p_id, business_id)
+
                 items_html += f'''
                 <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between" data-track-product-view data-product-id="{p_id}" data-product-name="{p_name}">
                     <div>
@@ -637,9 +828,12 @@ class SchemaRenderer:
                         </div>
                         <p class="text-gray-600 text-sm leading-relaxed mb-6">{item.get("description", "")}</p>
                     </div>
-                    <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 mt-auto text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
-                        Consult Now <i class="fas fa-arrow-right text-xs"></i>
-                    </a>
+                    <div class="mt-auto space-y-4">
+                        <a href="#contact" class="text-primary font-semibold hover:text-secondary flex items-center gap-2 text-sm transition" data-track-product-inquiry data-product-id="{p_id}" data-product-name="{p_name}">
+                            Consult Now <i class="fas fa-arrow-right text-xs"></i>
+                        </a>
+                        {comments_html}
+                    </div>
                 </div>
                 '''
 

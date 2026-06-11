@@ -1231,3 +1231,93 @@ def create_notification(business_id, notification_data):
         
     except Exception as e:
         print(f"Error creating notification: {str(e)}")
+
+
+@public_api_bp.route('/public/products/<product_id>/comments', methods=['GET'])
+def get_product_comments(product_id):
+    """
+    Get all comments for a specific product
+    """
+    try:
+        comments = list(mongo.db.product_comments.find({
+            'product_id': product_id
+        }).sort('created_at', -1))
+        
+        # Convert ObjectId to string
+        for c in comments:
+            c['_id'] = str(c['_id'])
+            if 'business_id' in c:
+                c['business_id'] = str(c['business_id'])
+                
+        return jsonify({
+            'success': True,
+            'comments': comments
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching product comments: {str(e)}'
+        }), 500
+
+
+@public_api_bp.route('/public/products/<product_id>/comments', methods=['POST'])
+def submit_product_comment(product_id):
+    """
+    Submit a comment for a product. Performs sentiment analysis and saves it.
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate fields
+        if not data.get('name') or not data.get('comment'):
+            return jsonify({
+                'success': False,
+                'message': 'Name and comment are required'
+            }), 400
+            
+        business_id = data.get('business_id')
+        if not business_id:
+            # Fallback: try finding business_id from the product
+            product = mongo.db.products.find_one({'_id': ObjectId(product_id)})
+            if product:
+                business_id = str(product['user_id'])
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'business_id is required'
+                }), 400
+                
+        # Perform sentiment analysis
+        sentiment = {'label': 'neutral', 'score': 0.0}
+        try:
+            from app.services.sentiment_service import SentimentService
+            sentiment_service = SentimentService()
+            sentiment = sentiment_service.analyze_sentiment(data['comment'])
+        except Exception as se:
+            print(f"Sentiment analysis error: {se}")
+            
+        comment_data = {
+            'product_id': product_id,
+            'business_id': ObjectId(business_id),
+            'name': data['name'],
+            'comment': data['comment'],
+            'sentiment': sentiment,
+            'created_at': datetime.utcnow()
+        }
+        
+        result = mongo.db.product_comments.insert_one(comment_data)
+        comment_data['_id'] = str(result.inserted_id)
+        comment_data['business_id'] = str(comment_data['business_id'])
+        
+        return jsonify({
+            'success': True,
+            'message': 'Comment submitted successfully',
+            'comment': comment_data
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error submitting comment: {str(e)}'
+        }), 500
