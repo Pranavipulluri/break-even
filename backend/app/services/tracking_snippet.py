@@ -40,7 +40,13 @@ class TrackingSnippet:
         # Default to the production backend — override via env in deployment
         if not backend_url:
             import os
-            backend_url = os.environ.get('BACKEND_URL') or os.environ.get('SELF_URL') or ""
+            backend_url = os.environ.get('BACKEND_URL') or os.environ.get('SELF_URL')
+            if not backend_url:
+                try:
+                    from flask import request
+                    backend_url = request.url_root.rstrip('/')
+                except Exception:
+                    backend_url = ""
 
         api_key_header = ""
         if api_key:
