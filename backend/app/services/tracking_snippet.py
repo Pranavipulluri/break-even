@@ -40,7 +40,7 @@ class TrackingSnippet:
         # Default to the production backend — override via env in deployment
         if not backend_url:
             import os
-            backend_url = os.environ.get('BACKEND_URL') or "https://break-even-backend.onrender.com"
+            backend_url = os.environ.get('BACKEND_URL') or os.environ.get('SELF_URL') or ""
 
         api_key_header = ""
         if api_key:
