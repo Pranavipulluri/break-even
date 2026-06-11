@@ -402,19 +402,19 @@ const Analytics = () => {
             />
             <MetricCard
               title="Message Inquiries"
-              value={(productData.totalInquiries ?? 0).toLocaleString()}
+              value={(productData.totalMessageInquiries ?? productData.totalInquiries ?? 0).toLocaleString()}
               icon={MessageSquare}
               color="bg-pink-500"
               gradient="from-pink-500 to-rose-600"
-              description="Consultations started"
+              description={`${productData.totalContacts ?? 0} contacts · ${productData.totalConsultations ?? 0} consultations · ${productData.totalBookings ?? 0} bookings`}
             />
             <MetricCard
               title="Consultation Rate"
-              value={`${productData.totalViews > 0 ? ((productData.totalInquiries / productData.totalViews) * 100).toFixed(1) : '0.0'}%`}
+              value={`${productData.consultationRate ?? (productData.totalViews > 0 ? ((productData.totalInquiries / productData.totalViews) * 100).toFixed(1) : '0.0')}%`}
               icon={MousePointer}
               color="bg-emerald-500"
               gradient="from-emerald-500 to-teal-600"
-              description="Views to message inquiries conversion"
+              description="Consultations started from total inquiries"
             />
           </div>
 
