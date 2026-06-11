@@ -56,7 +56,7 @@ def serve_child_website(website_id):
         html_content = TrackingSnippet.inject(
             html_content,
             business_id=str(owner_id),
-            backend_url="http://localhost:5000",
+            backend_url=None,
             website_id=str(website['_id'])
         )
         
