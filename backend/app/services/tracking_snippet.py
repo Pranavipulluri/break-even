@@ -39,7 +39,8 @@ class TrackingSnippet:
         """
         # Default to the production backend — override via env in deployment
         if not backend_url:
-            backend_url = "https://break-even-backend.onrender.com"
+            import os
+            backend_url = os.environ.get('BACKEND_URL') or "https://break-even-backend.onrender.com"
 
         api_key_header = ""
         if api_key:
@@ -53,6 +54,8 @@ class TrackingSnippet:
   "use strict";
   var BID = "{business_id}";
   var WID = "{web_id_str}";
+  window.__BE_WID = WID;
+  window.__BE_BACKEND_URL = "{backend_url}";
   var API = "{backend_url}/api/events/ingest";
   var HEADERS = {{
     "Content-Type": "application/json",

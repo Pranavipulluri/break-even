@@ -17,7 +17,7 @@ def create_booking():
         
         # Validate required fields
         required_fields = ['business_id', 'customer_name', 'customer_email', 
-                          'customer_phone', 'service_type', 'attorney_name', 'date', 'time']
+                          'customer_phone', 'service_type', 'date', 'time']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'{field} is required'}), 400
@@ -29,7 +29,7 @@ def create_booking():
             customer_email=data['customer_email'],
             customer_phone=data['customer_phone'],
             service_type=data['service_type'],
-            attorney_name=data['attorney_name'],
+            attorney_name=data.get('attorney_name', 'Staff'),
             date=data['date'],
             time=data['time'],
             notes=data.get('notes', '')
